@@ -1,0 +1,13 @@
+from pyomo.environ import ConcreteModel, Var, ConstraintList, Objective,maximize
+from pyomo.contrib.pro import UncSet, UncParam
+
+m = ConcreteModel()
+m.x = Var()
+m.U = UncSet()
+m.U.a = UncParam()
+
+m.cons = ConstraintList()
+m.cons.add(m.x*m.U.a <= 0)
+m.Obj = Objective(expr=m.x, sense=maximize)
+
+

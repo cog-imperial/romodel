@@ -1,0 +1,7 @@
+numpy
+pyomo
+jupyter
+IPython
+ipdb
+pudb
+sphinx
