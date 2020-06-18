@@ -5,7 +5,7 @@ from pyomo.environ import (Constraint,
                            Objective,
                            maximize,
                            minimize)
-from pyomo.core import Transformation
+from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from pro import UncParam
 from pro.visitor import _expression_is_uncertain, identify_parent_components
@@ -63,6 +63,8 @@ class BaseRobustTransformation(Transformation):
         return self.generate_repn_param(instance, cons).is_linear()
 
 
+@TransformationFactory.register('pro.robust.ellipsoidal',
+                                doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
         for c in self.get_uncertain_constraints(instance):
@@ -125,6 +127,8 @@ class EllipsoidalTransformation(BaseRobustTransformation):
             c.deactivate()
 
 
+@TransformationFactory.register('pro.robust.polyhedral',
+                                doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
         for c in self.get_uncertain_constraints(instance):
