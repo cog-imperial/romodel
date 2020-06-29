@@ -123,9 +123,11 @@ class EllipsoidalSet(UncSet):
         (param - mu)^T * A * (param - mu) <= 1
     '''
     def __init__(self, mean, cov, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        rhs = kwargs.pop('rhs', 1)
         self.mean = mean
         self.cov = cov
+        self.rhs = rhs
+        super().__init__(*args, **kwargs)
 
     def is_ellipsoidal(self):
         return True

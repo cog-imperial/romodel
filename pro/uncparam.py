@@ -19,6 +19,7 @@ class UncParam(Var):
         _rule = kwargs.pop('rule', None)
         _fixed = kwargs.pop('fixed', None)
         _uncset = kwargs.pop('uncset', None)
+        _nominal = kwargs.pop('nominal', None)
 
         # _var = kwargs.pop('var', None)
         #
@@ -35,6 +36,7 @@ class UncParam(Var):
         else:
             self._fixed = _fixed
         self._uncset = _uncset
+        self._nominal = _nominal
         # if isinstance(_var, Component):
         #     self._var = [_var]
         # else:
@@ -48,3 +50,7 @@ class UncParam(Var):
     def uncset(self, uncset):
         # TODO: refactor uncset and add assert uncset.type() is UncSet here
         self._uncset = uncset
+
+    @property
+    def nominal(self):
+        return self._nominal

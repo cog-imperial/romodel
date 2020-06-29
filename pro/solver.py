@@ -101,6 +101,20 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         return results
 
 
+class CuttingPlaenSolver(pyomo.opt.OptSolver):
+    def _apply_solver(self):
+        instance = self._instance
+        ...
+        fn_for_cls(instance.constraints)
+        fn_for_vls(instance.variables)
+        fn_for_ols(instance.objectives)
+        fn_for_upls(instance.uncparams)
+        fn_for_usls(instance.uncsets)
+        opt = None
+        return pyutilib.misc.Bunch(rc=getattr(opt, '_rc', None),
+                                   log=getattr(opt, '_log', None))
+
+
 @pyomo.opt.SolverFactory.register('pro.robust.cuts',
                                   doc='Robust cutting plane solver.')
 class CuttingPlaneSolver(pyomo.opt.OptSolver):
@@ -117,20 +131,26 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         start_time = time.time()
         instance = self._instance
 
-        xfrm = TransformationFactory('pro.robust.generator')
+        xfrm = TransformationFactory('pro.robust.generators')
         xfrm.apply_to(instance)
         tdata = instance._transformation_data['pro.robust.generators']
         generators = tdata.generators
 
         # Need to set this up for master and sub solver
         if not self.options.solver:
-            solver = 'glpk'
+            # Use glpk instead
+            solver = 'gurobi'
         else:
             solver = self.options.solver
 
         with pyomo.opt.SolverFactory(solver) as opt:
             self.results = []
             feasible = {}
+            # Solve nominal problem
+            results = opt.solve(instance,
+                                tee=self._tee,
+                                timelimit=self._timelimit)
+            # Add initial cut to check feasibility
             for g in generators:
                 feasible[g.name] = g.add_cut()
             # Keep adding cuts until feasible
@@ -158,3 +178,42 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
     def _postsolve(self):
         self._instance = None
         return self.results_obj
+
+    def _setup_results_obj(self):
+        #
+        # Create a results object
+        #
+        results = pyomo.opt.SolverResults()
+        #
+        # SOLVER
+        #
+        solv = results.solver
+        solv.name = self.options.subsolver
+        solv.wallclock_time = self.wall_time
+        cpu_ = []
+        for res in self.results:
+            if not getattr(res.solver, 'cpu_time', None) is None:
+                cpu_.append(res.solver.cpu_time)
+        if cpu_:
+            solv.cpu_time = sum(cpu_)
+        #
+        # TODO: detect infeasibilities, etc
+        solv.termination_condition = pyomo.opt.TerminationCondition.optimal
+        #
+        # PROBLEM
+        #
+        prob = results.problem
+        prob.name = self._instance.name
+        prob.number_of_constraints = self._instance.statistics.number_of_constraints
+        prob.number_of_variables = self._instance.statistics.number_of_variables
+        prob.number_of_binary_variables = self._instance.statistics.number_of_binary_variables
+        prob.number_of_integer_variables =\
+            self._instance.statistics.number_of_integer_variables
+        prob.number_of_continuous_variables =\
+            self._instance.statistics.number_of_continuous_variables
+        prob.number_of_objectives = self._instance.statistics.number_of_objectives
+        #
+        # SOLUTION(S)
+        #
+        self._instance.solutions.store_to(results)
+        return results

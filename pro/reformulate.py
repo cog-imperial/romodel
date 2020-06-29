@@ -9,6 +9,7 @@ from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from pro import UncParam
 from pro.visitor import _expression_is_uncertain, identify_parent_components
+from pro.generator import RobustConstraint
 from pao.duality import create_linear_dual_from
 
 
@@ -174,3 +175,31 @@ class PolyhedralTransformation(BaseRobustTransformation):
                 setattr(instance, c.name + '_counterpart_lower', dual)
             # Deactivate original constraint
             c.deactivate()
+
+
+@TransformationFactory.register('pro.robust.generators',
+                                doc=("Replace uncertain constraints by"
+                                     " cutting plane generators"))
+class GeneratorTransformation(BaseRobustTransformation):
+    """ Replace all uncertain constraints by RobustConstraint objects. """
+    def _apply_to(self, instance):
+        self._instance = instance
+        cons = self.get_uncertain_constraints(instance)
+
+        tdata = instance._transformation_data['pro.robust.generators']
+        tdata.generators = []
+
+        for c in cons:
+            generator = RobustConstraint()
+            setattr(instance, c.name + '_generator', generator)
+
+            generator.build(c)
+            tdata.generators.append(generator)
+
+            c.deactivate()
+
+    def get_generator(self, c):
+        pass
+
+    def get_uncset(self, c):
+        pass
