@@ -38,7 +38,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         # xfrm.apply_to(instance)
 
         if not self.options.solver:
-            solver = 'glpk'
+            solver = 'gurobi'
         else:
             solver = self.options.solver
 
