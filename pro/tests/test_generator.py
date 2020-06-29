@@ -17,6 +17,21 @@ class TestGenerator(unittest.TestCase):
         m.rc = pro.RobustConstraint()
         m.rc.build(m.c)
 
+    def test_repn(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var([0, 1])
+        m.z = pe.Var()
+        m.w = pro.UncParam([0, 1], nominal=(0.5, 0.5))
+        expr = m.z + m.x[0]*m.w[0] + m.x[1]*m.w[1]
+
+        baseline_param = set([id(m.w[i]) for i in m.w])
+        baseline_vars = set([id(m.x[i]) for i in m.w])
+
+        repn = pro.generators.generate_standard_repn(expr)
+        self.assertEqual(set(id(i) for i in repn.linear_coefs), baseline_vars)
+        self.assertEqual(set(id(i) for i in repn.linear_vars), baseline_param)
+        self.assertEqual(repn.constant, m.z)
+
     def test_nominal(self):
         m = pe.ConcreteModel()
         m.x = pe.Var([0, 1])
