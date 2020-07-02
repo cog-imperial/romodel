@@ -49,7 +49,7 @@ class BaseRobustTransformation(Transformation):
         """ Return all uncertain constraints on the model. """
         constraints = instance.component_data_objects(Constraint, active=True)
         # TODO: generator
-        return [c for c in constraints if _expression_is_uncertain(c.expr)]
+        return [c for c in constraints if _expression_is_uncertain(c.body)]
 
     def generate_repn_param(self, instance, cons):
         self.fix_component(instance, component=Var)
