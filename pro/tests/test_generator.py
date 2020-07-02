@@ -1,6 +1,7 @@
 import pyomo.environ as pe
 import pyutilib.th as unittest
 import pro
+from pro.generator import generate_linear_repn
 from pyomo.opt import check_available_solvers
 from pyomo.repn import generate_standard_repn
 
@@ -27,10 +28,10 @@ class TestGenerator(unittest.TestCase):
         baseline_param = set([id(m.w[i]) for i in m.w])
         baseline_vars = set([id(m.x[i]) for i in m.w])
 
-        repn = pro.generators.generate_standard_repn(expr)
+        repn = generate_linear_repn(expr)
         self.assertEqual(set(id(i) for i in repn.linear_coefs), baseline_vars)
         self.assertEqual(set(id(i) for i in repn.linear_vars), baseline_param)
-        self.assertEqual(repn.constant, m.z)
+        self.assertEqual(id(repn.constant), id(m.z))
 
     def test_nominal(self):
         m = pe.ConcreteModel()

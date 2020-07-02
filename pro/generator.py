@@ -13,6 +13,7 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.repn import generate_standard_repn
 from pro import UncParam
 from pro.visitor import identify_parent_components
+from collections import defaultdict
 
 
 @declare_custom_block(name='RobustConstraint')
@@ -37,7 +38,7 @@ class RobustConstraintData(_BlockData):
         self.upper = cons.upper
         self._uncparam = _collect_uncparam(cons)
         self._uncset = [self._uncparam[0]._uncset]
-        self._linrep = _lin_rep_uncparam(cons.body)
+        self._rule = self.construct_rule(cons.body)
         self._bounds = (cons.lower, cons.upper)
         # Generate nominal constraint
         nominal_expr = self.nominal_constraint_expr()
@@ -56,9 +57,7 @@ class RobustConstraintData(_BlockData):
 
         # Generate cut expression:
         uncparam = self._uncparam[0]
-        coef_id_map = {id(uncparam[i]): sep.uncparam[i].value
-                       for i in uncparam}
-        expr = quicksum(coef_id_map[id(p)]*x for x, p in zip(*self._linrep))
+        expr = self._rule({i: uncparam[i].value for i in uncparam})
 
         self._constraints.add((self.lower, expr, self.upper))
         self.feasible = value(sep.obj <= self.upper)
@@ -73,13 +72,9 @@ class RobustConstraintData(_BlockData):
         # TODO: use setattr to give uncparam same name as in model
         m.uncparam = Var(index)
         # collect current coefficient values
-        coef_id_dict = {id(p): value(x) for x, p in zip(*self._linrep)}
-        coef_index_dict = {i: coef_id_dict[id(uncparam[i])] for i in index}
+        expr = self._rule(m.uncparam, compute_values=True)
         # construct objective with current coefficient values
-        m.obj = Objective(expr=quicksum(m.uncparam[i]
-                                        * coef_index_dict[i]
-                                        for i in index),
-                          sense=maximize)
+        m.obj = Objective(expr=expr, sense=maximize)
 
         # construct constraints from uncertainty set
         uncset = self._uncset[0]
@@ -97,22 +92,40 @@ class RobustConstraintData(_BlockData):
     def nominal_constraint_expr(self):
         """ Generate the nominal constraint. """
         # TODO: replace p.value by p.nominal
-        expr = quicksum(c*p.value for c, p in zip(*self._linrep))
+        uncparam = self._uncparam[0]
+        expr = self._rule({i: uncparam[i].value for i in uncparam})
         return (self._bounds[0], expr, self._bounds[1])
 
     # !!!
     def is_feasible(self):
         return False
 
+    def construct_rule(self, expr):
+        repn = generate_linear_repn(expr)
+        linear_vars = repn.linear_vars
+        linear_coefs = repn.linear_coefs
+        constant = repn.constant
+        id_coef_dict = {id(v): c for v, c in zip(linear_vars,
+                                                 linear_coefs)}
+        param = self._uncparam[0]
+        index_coef_dict = {i: id_coef_dict.get(id(param[i]), 0) for i in param}
 
-# !!!
+        def rule(x, compute_values=False):
+            if compute_values:
+                return (quicksum(value(index_coef_dict[i])*x[i] for i in x)
+                        + constant)
+            else:
+                return quicksum(index_coef_dict[i]*x[i] for i in x) + constant
+
+        return rule
+
+
 def _collect_uncparam(c):
     uncparam = [i for i in identify_parent_components(c.expr, [UncParam])]
     return uncparam
 
 
-# !!!
-def _lin_rep_uncparam(expr, evaluate=False):
+def generate_linear_repn(expr, evaluate=False):
     """
     Given an expression containing UncParam return its linear representation.
 
@@ -121,9 +134,9 @@ def _lin_rep_uncparam(expr, evaluate=False):
     :param evaluate: If true, evaluate fixed expressions
     :type c: bool, optional
 
-    :return: 2 element tuple. First element are the linear coefficients and
-    second element the corresponding UncParam objects.
-    :rtype: tuple (list, list)
+    :return: Standard representation containing a constant term (wrt UncParam),
+    linear coefficients, and the corresponding UncParam objects.
+    :rtype: pyomo.repn.StandardRepn
 
 
     """
@@ -140,9 +153,9 @@ def _lin_rep_uncparam(expr, evaluate=False):
                 v.fix()
                 _fixed.append(v)
 
-    repn = generate_standard_repn(expr, compute_values=False)
+    repn = generate_standard_repn(expr, compute_values=False, quadratic=False)
 
     for v in _fixed:
         v.unfix()
 
-    return repn.linear_coefs, repn.linear_vars
+    return repn
