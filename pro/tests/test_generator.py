@@ -37,8 +37,8 @@ class TestGenerator(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var([0, 1])
         m.w = pro.UncParam([0, 1], nominal=(0.5, 0.5))
-        for i in m.w:
-            m.w[i].value = 0.5
+        # for i in m.w:
+        #     m.w[i].value = 0.5
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
 
         m.rc = pro.RobustConstraint()
@@ -61,8 +61,8 @@ class TestGenerator(unittest.TestCase):
         m.w = pro.UncParam([0, 1], nominal=(0.5, 0.5), uncset=m.U)
         m.U.c0 = pe.Constraint(expr=m.w[0] <= 1)
         m.U.c1 = pe.Constraint(expr=m.w[1] <= 1)
-        for i in m.w:
-            m.w[i].value = 0.5
+        # for i in m.w:
+        #     m.w[i].value = 0.5
         for i in m.x:
             m.x[i].value = 0.8
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
