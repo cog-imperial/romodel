@@ -75,7 +75,7 @@ class _UncParamData(ComponentData, NumericValue):
         nominal     The nominal value of this parameter.
     """
 
-    __slots__ = ('_value', '_nominal')
+    __slots__ = ('_value', '_nominal', '_fixed')
 
     def __init__(self, component):
         #
@@ -89,6 +89,7 @@ class _UncParamData(ComponentData, NumericValue):
         #
         self._value = None
         self._nominal = None
+        self._fixed = False
 
     def __getstate__(self):
         """This method must be defined because this class uses slots."""
@@ -121,17 +122,35 @@ class _UncParamData(ComponentData, NumericValue):
         """Set the nominal value for this uncertain parameter."""
         self._nominal = val
 
+    @property
+    def fixed(self):
+        return self._fixed
+
+    @fixed.setter
+    def fixed(self, val):
+        self._fixed = val
+
     def is_fixed(self):
         """Returns True because this value is fixed."""
+        return False
+
+    def is_potentially_variable(self):
+        # TODO: this is kind of a hack to make things work with
+        # generate_standard_repn.
+        return True
+
+    def is_variable_type(self):
+        # TODO: this is kind of a hack to make things work with
+        # generate_standard_repn.
+        return True
+
+    def is_parameter_type(self):
+        """Returns True because this is an (uncertain) Parameter."""
         return True
 
     def is_constant(self):
         """Returns False because this is not a constant in an expression."""
         return False
-
-    def is_parameter_type(self):
-        """Returns True because this is an (uncertain) Parameter."""
-        return True
 
     def _compute_polynomial_degree(self, result):
         """Returns 0 because this is a parameter object."""
@@ -202,6 +221,7 @@ class UncParam(IndexedComponent):
                 if ndx not in self._data:
                     self._data[ndx] = _UncParamData(self)
                 self._data[ndx]._nominal = nom[ndx]
+                self._data[ndx]._value = nom[ndx]
                 self._component = self_weakref
 
     def _pprint(self):

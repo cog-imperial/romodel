@@ -49,7 +49,7 @@ class _ParentComponentVisitor(SimpleExpressionVisitor):
                 parent = node.parent_component()
             except AttributeError:
                 return
-            if parent.__class__ in self.types:
+            if parent.ctype in self.types:
                 if id(parent) in self.seen:
                     return
                 self.seen.add(id(parent))
