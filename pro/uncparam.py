@@ -208,9 +208,6 @@ class UncParam(IndexedComponent):
         timer = ConstructionTimer(self)
 
         nom = self._nominal
-        #TODO: finish this
-        self._constructed = True
-        timer.report()
 
         if not self.is_indexed():
             self._data[None] = self
@@ -224,6 +221,9 @@ class UncParam(IndexedComponent):
                 self._data[ndx]._value = nom[ndx]
                 self._component = self_weakref
 
+        self._constructed = True
+        timer.report()
+
     def _pprint(self):
         """
         Return data that will be printed for this component.
@@ -236,13 +236,9 @@ class UncParam(IndexedComponent):
         return ([("Size", len(self)),
                  ("Index", self._index if self.is_indexed() else None),
                  ],
-                # self.sparse_iteritems(),
                 self.iteritems(),
                 ("Nominal", "Value"),
                 dataGen
-                # ("Value",),
-                # dataGen,
-                # ("Nominal", nomGen),
                 )
 
 
