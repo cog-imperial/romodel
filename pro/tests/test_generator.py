@@ -9,15 +9,6 @@ solvers = check_available_solvers('gurobi')
 
 
 class TestGenerator(unittest.TestCase):
-    def test_generator(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var([0, 1])
-        m.w = pro.UncParam([0, 1])
-        m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
-
-        m.rc = pro.RobustConstraint()
-        m.rc.build(m.c)
-
     def test_repn(self):
         m = pe.ConcreteModel()
         m.x = pe.Var([0, 1])
