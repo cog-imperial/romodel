@@ -88,13 +88,13 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     "Uncertainty set {} is not "
                     "ellipsoidal.".format(uncset.name))
 
-            # Set parameter value to deterministic
-            for key in param.keys():
-                param[key].value = uncset.mean[key]
+            # # Set parameter value to deterministic
+            # for key in param.keys():
+            #     param[key].value = uncset.mean[key]
 
             # Generate robust counterpart
-            det = quicksum(x[0]*x[1].value for x in zip(repn.linear_coefs,
-                                                        repn.linear_vars))
+            det = quicksum(x[0]*x[1].nominal for x in zip(repn.linear_coefs,
+                                                          repn.linear_vars))
             det += repn.constant
             param_var_dict = {id(param): var
                               for param, var
