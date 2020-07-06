@@ -228,17 +228,21 @@ class UncParam(IndexedComponent):
         """
         Return data that will be printed for this component.
         """
-        default = None  # stub
         dataGen = None  # stub
+
+        def dataGen(i, x):
+            return (x.nominal, x.value)
+
         return ([("Size", len(self)),
                  ("Index", self._index if self.is_indexed() else None),
-                 ("Domain", self.domain.name),
-                 ("Default", default),
-                 ("Mutable", self._mutable),
                  ],
-                self.sparse_iteritems(),
-                ("Value",),
-                dataGen,
+                # self.sparse_iteritems(),
+                self.iteritems(),
+                ("Nominal", "Value"),
+                dataGen
+                # ("Value",),
+                # dataGen,
+                # ("Nominal", nomGen),
                 )
 
 
