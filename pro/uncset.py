@@ -132,6 +132,9 @@ class EllipsoidalSet(UncSet):
     def is_ellipsoidal(self):
         return True
 
+    def is_polyhedral(self):
+        return False
+
 
 class PolyhedralSet(BaseSet):
     '''

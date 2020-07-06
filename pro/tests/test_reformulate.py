@@ -14,6 +14,10 @@ class TestReformulation(unittest.TestCase):
     def test_polyhedral(self):
         m = Knapsack()
         m.w.uncset = m.P
+        self.assertTrue(m.P.is_polyhedral())
+        self.assertTrue(m.Plib.is_polyhedral())
+        self.assertFalse(m.E.is_polyhedral())
+        self.assertFalse(m.Elib.is_polyhedral())
         t = PolyhedralTransformation()
         t.apply_to(m)
         solver = SolverFactory('gurobi')
@@ -36,6 +40,10 @@ class TestReformulation(unittest.TestCase):
     def test_ellipsoidal(self):
         m = Knapsack()
         m.w.uncset = m.E
+        self.assertFalse(m.P.is_ellipsoidal())
+        self.assertFalse(m.Plib.is_ellipsoidal())
+        self.assertTrue(m.E.is_ellipsoidal())
+        self.assertTrue(m.Elib.is_ellipsoidal())
         t = EllipsoidalTransformation()
         t.apply_to(m)
         solver = SolverFactory('gurobi')
