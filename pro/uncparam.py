@@ -75,7 +75,7 @@ class _UncParamData(ComponentData, NumericValue):
         nominal     The nominal value of this parameter.
     """
 
-    __slots__ = ('_value', '_nominal', '_fixed')
+    __slots__ = ('_value', '_nominal', '_fixed', '_bounds')
 
     def __init__(self, component):
         #
@@ -90,6 +90,7 @@ class _UncParamData(ComponentData, NumericValue):
         self._value = None
         self._nominal = None
         self._fixed = False
+        self._bounds = (None, None)
 
     def __getstate__(self):
         """This method must be defined because this class uses slots."""
@@ -129,6 +130,10 @@ class _UncParamData(ComponentData, NumericValue):
     @fixed.setter
     def fixed(self, val):
         self._fixed = val
+
+    @property
+    def bounds(self):
+        return self._bounds
 
     def is_fixed(self):
         """Returns True because this value is fixed."""
@@ -198,6 +203,15 @@ class UncParam(IndexedComponent):
 
         kwd.setdefault('ctype', UncParam)
         IndexedComponent.__init__(self, *args, **kwd)
+
+    @property
+    def uncset(self):
+        return self._uncset
+
+    @uncset.setter
+    def uncset(self, uncset):
+        #TODO: check value
+        self._uncset = uncset
 
     def construct(self, data=None):
         """
