@@ -56,7 +56,8 @@ class RobustConstraintData(_BlockData):
         # Check feasibility?
 
         # Generate cut expression:
-        uncparam = self._uncparam[0]
+        # uncparam = self._uncparam[0]
+        uncparam = sep.uncparam
         expr = self._rule({i: uncparam[i].value for i in uncparam})
 
         self._constraints.add((self.lower, expr, self.upper))
