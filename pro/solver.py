@@ -44,6 +44,8 @@ class ReformulationSolver(pyomo.opt.OptSolver):
 
         with pyomo.opt.SolverFactory(solver) as opt:
             self.results = []
+            # TODO: pass options to solver, get rid of this
+            opt.options['NonConvex'] = 2
             results = opt.solve(self._instance,
                                 tee=self._tee,
                                 timelimit=self._timelimit)
