@@ -51,6 +51,10 @@ class BaseRobustTransformation(Transformation):
         # TODO: generator
         return [c for c in constraints if _expression_is_uncertain(c.body)]
 
+    def get_uncertain_objectives(self, instance):
+        objectives = instance.component_data_objects(Objective, active=True)
+        return [o for o in objectives if _expression_is_uncertain(o.expr)]
+
     def generate_repn_param(self, instance, cons):
         self.fix_component(instance, component=Var)
         repn = generate_standard_repn(cons.body, compute_values=False)
