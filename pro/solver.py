@@ -101,20 +101,6 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         return results
 
 
-class CuttingPlaenSolver(pyomo.opt.OptSolver):
-    def _apply_solver(self):
-        instance = self._instance
-        ...
-        fn_for_cls(instance.constraints)
-        fn_for_vls(instance.variables)
-        fn_for_ols(instance.objectives)
-        fn_for_upls(instance.uncparams)
-        fn_for_usls(instance.uncsets)
-        opt = None
-        return pyutilib.misc.Bunch(rc=getattr(opt, '_rc', None),
-                                   log=getattr(opt, '_log', None))
-
-
 @pyomo.opt.SolverFactory.register('pro.robust.cuts',
                                   doc='Robust cutting plane solver.')
 class CuttingPlaneSolver(pyomo.opt.OptSolver):
