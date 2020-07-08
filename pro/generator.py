@@ -114,7 +114,7 @@ class RobustConstraintData(_BlockData):
         def rule(x, compute_values=False):
             if compute_values:
                 return (quicksum(value(index_coef_dict[i])*x[i] for i in x)
-                        + constant)
+                        + value(constant))
             else:
                 return quicksum(index_coef_dict[i]*x[i] for i in x) + constant
 
