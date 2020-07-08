@@ -45,15 +45,12 @@ class BaseRobustTransformation(Transformation):
             c.unfix()
         self._fixed_components[component] = None
 
-    def get_uncertain_constraints(self, instance):
+    def get_uncertain_components(self, instance, component=Constraint):
         """ Return all uncertain constraints on the model. """
-        constraints = instance.component_data_objects(Constraint, active=True)
-        # TODO: generator
-        return [c for c in constraints if _expression_is_uncertain(c.body)]
-
-    def get_uncertain_objectives(self, instance):
-        objectives = instance.component_data_objects(Objective, active=True)
-        return [o for o in objectives if _expression_is_uncertain(o.expr)]
+        constraints = instance.component_data_objects(component, active=True)
+        for c in constraints:
+            if _expression_is_uncertain(c.body):
+                yield c
 
     def generate_repn_param(self, instance, cons):
         self.fix_component(instance, component=Var)
@@ -72,7 +69,7 @@ class BaseRobustTransformation(Transformation):
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
-        for c in self.get_uncertain_constraints(instance):
+        for c in self.get_uncertain_components(instance):
 
             assert not c.equality, (
                     "Currently can't handle equality constraints yet.")
@@ -136,7 +133,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
-        for c in self.get_uncertain_constraints(instance):
+        for c in self.get_uncertain_components(instance):
 
             assert not c.equality, (
                     "Currently can't handle equality constraints yet.")
@@ -188,7 +185,7 @@ class GeneratorTransformation(BaseRobustTransformation):
     """ Replace all uncertain constraints by RobustConstraint objects. """
     def _apply_to(self, instance):
         self._instance = instance
-        cons = self.get_uncertain_constraints(instance)
+        cons = self.get_uncertain_components(instance)
 
         tdata = instance._transformation_data['pro.robust.generators']
         tdata.generators = []
