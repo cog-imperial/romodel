@@ -106,7 +106,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                for i, x in param.iteritems()
                                for j, y in param.iteritems())
             # For upper bound: det + padding <= b
-            if c.upper:
+            if c.has_ub():
                 name = c.name + '_counterpart_upper'
                 if root:
                     cp = Constraint(expr=det + sqrt(padding) <= c.upper)
@@ -116,7 +116,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     setattr(instance, c.name + '_det_upper', c_det)
                 setattr(instance, name, cp)
             # For lower bound: det - padding >= b
-            if c.lower:
+            if c.has_lb():
                 name = c.name + '_counterpart_lower'
                 if root:
                     cp = Constraint(expr=det - sqrt(padding) >= c.lower)
