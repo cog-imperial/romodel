@@ -48,18 +48,18 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m)
         solver = SolverFactory('gurobi')
         solver.solve(m)
-        self.assertEqual(m.value(), 19.)
+        self.assertEqual(m.value(), 25.)
 
     @unittest.skipIf('gurobi' not in solvers,
                      'gurobi not available')
     def test_ellipsoidal_lib(self):
         m = Knapsack()
         m.w.uncset = m.Elib
-        t = PolyhedralTransformation()
+        t = EllipsoidalTransformation()
         t.apply_to(m)
         solver = SolverFactory('gurobi')
         solver.solve(m)
-        self.assertEqual(m.value(), 19.)
+        self.assertEqual(m.value(), 25.)
 
 
 if __name__ == "__main__":
