@@ -45,7 +45,7 @@ def Knapsack():
     rhs = [sum(p[t]*w[t] for t in tools) + 5.5 for p in P]
 
     M.E = UncSet()
-    M.w = UncParam(M.ITEMS, uncset=M.E)
+    M.w = UncParam(M.ITEMS, uncset=M.E, nominal=w)
     w = M.w
 
     # Ellipsoidal set
