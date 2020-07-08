@@ -136,14 +136,18 @@ class EllipsoidalSet(UncSet):
         return False
 
 
-class PolyhedralSet(BaseSet):
+class PolyhedralSet(UncSet):
     '''
     Defines a polyhedral uncertainty set of shape:
         P * param <= b
     '''
-    def __init__(self, mat, rhs):
+    def __init__(self, mat, rhs, *args, **kwargs):
         self.mat = mat
         self.rhs = rhs
+        super().__init__(*args, **kwargs)
 
     def is_polyhedral(self):
         return True
+
+    def is_ellipsoidal(self):
+        return False
