@@ -46,15 +46,26 @@ class BaseRobustTransformation(Transformation):
         self._fixed_components[component] = None
 
     def get_uncertain_components(self, instance, component=Constraint):
-        """ Return all uncertain constraints on the model. """
-        constraints = instance.component_data_objects(component, active=True)
-        for c in constraints:
-            if _expression_is_uncertain(c.body):
+        """ Return all uncertain components of type `component`. """
+        comp_list = instance.component_data_objects(component, active=True)
+        for c in comp_list:
+            if hasattr(c, 'body'):
+                # Constraints
+                expr = c.body
+            else:
+                # Objective
+                expr = c.expr
+
+            if _expression_is_uncertain(expr):
                 yield c
 
-    def generate_repn_param(self, instance, cons):
+    def generate_repn_param(self, instance, cdata):
         self.fix_component(instance, component=Var)
-        repn = generate_standard_repn(cons.body, compute_values=False)
+        if hasattr(cdata, 'body'):
+            expr = cdata.body
+        else:
+            expr = cdata.expr
+        repn = generate_standard_repn(expr, compute_values=False)
         self.unfix_component(component=Var)
         return repn
 
@@ -69,6 +80,69 @@ class BaseRobustTransformation(Transformation):
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
+        for c in self.get_uncertain_components(instance, component=Objective):
+            repn = self.generate_repn_param(instance, c)
+            assert repn.is_linear(), (
+                    "Constraint {} should be linear in "
+                    "unc. parameters".format(c.name))
+            param = list(identify_parent_components(c.expr, [UncParam]))
+            assert len(param) == 1, (
+                    "Constraint {} should not contain more than one UncParam "
+                    "component".format(c.name))
+
+            # Collect UncParam and UncSet
+            param = param[0]
+            uncset = param._uncset
+            assert uncset.is_ellipsoidal(), (
+                    "Uncertainty set {} is not "
+                    "ellipsoidal.".format(uncset.name))
+            # Generate robust counterpart
+            det = quicksum(x[0]*x[1].nominal for x in zip(repn.linear_coefs,
+                                                          repn.linear_vars))
+            det += repn.constant
+            param_var_dict = {id(param): var
+                              for param, var
+                              in zip(repn.linear_vars, repn.linear_coefs)}
+            # padding = sqrt( var^T * cov^-1 * var )
+            padding = quicksum(param_var_dict[id(x)]
+                               * uncset.cov[i, j]
+                               * param_var_dict[id(y)]
+                               for i, x in param.iteritems()
+                               for j, y in param.iteritems())
+            # For minimization: min det + padding
+            setattr(instance, c.name + '_epigraph', Var())
+            epigraph = getattr(instance, c.name + '_epigraph')
+            if c.is_minimizing():
+                name = c.name + '_counterpart'
+                if root:
+                    cp = Objective(expr=det + sqrt(padding), sense=minimize)
+                else:
+                    cp = Constraint(expr=padding <= (epigraph - det)**2)
+                    c_det = Constraint(expr=det <= epigraph)
+                    setattr(instance,
+                            c.name + '_det',
+                            c_det)
+                    setattr(instance,
+                            c.name + '_new',
+                            Objective(expr=epigraph, sense=minimize))
+                setattr(instance, name, cp)
+            # For maximization: max det - padding
+            if not c.is_minimizing():
+                name = c.name + '_counterpart'
+                if root:
+                    cp = Objective(expr=det - sqrt(padding), sense=maximize)
+                else:
+                    cp = Constraint(expr=padding <= (det - epigraph)**2)
+                    c_det = Constraint(expr=epigraph <= det)
+                    setattr(instance,
+                            c.name + '_det',
+                            c_det)
+                    setattr(instance,
+                            c.name + '_new',
+                            Objective(expr=epigraph, sense=maximize))
+                setattr(instance, name, cp)
+            c.deactivate()
+
         for c in self.get_uncertain_components(instance):
 
             assert not c.equality, (
@@ -88,10 +162,6 @@ class EllipsoidalTransformation(BaseRobustTransformation):
             assert uncset.is_ellipsoidal(), (
                     "Uncertainty set {} is not "
                     "ellipsoidal.".format(uncset.name))
-
-            # # Set parameter value to deterministic
-            # for key in param.keys():
-            #     param[key].value = uncset.mean[key]
 
             # Generate robust counterpart
             det = quicksum(x[0]*x[1].nominal for x in zip(repn.linear_coefs,
