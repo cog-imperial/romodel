@@ -17,6 +17,7 @@ class TestE2E(unittest.TestCase):
     def test_portfolio_reformulation(self):
         m = pro.examples.Portfolio()
         solver = pe.SolverFactory('pro.robust.reformulation')
+        solver.options['NonConvex'] = 2
         solver.solve(m, tee=False)
 
     def test_portfolio_cuts(self):

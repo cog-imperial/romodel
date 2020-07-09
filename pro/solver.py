@@ -44,8 +44,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
 
         with pyomo.opt.SolverFactory(solver) as opt:
             self.results = []
-            # TODO: pass options to solver, get rid of this
-            opt.options['NonConvex'] = 2
+            opt.options = self.options
             results = opt.solve(self._instance,
                                 tee=self._tee,
                                 timelimit=self._timelimit)
@@ -124,7 +123,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         tdata = instance._transformation_data['pro.robust.generators']
         generators = tdata.generators
 
-        # Need to set this up for master and sub solver
+        # Need to set this up for main and sub solver
         if not self.options.solver:
             # Use glpk instead
             solver = 'gurobi'
