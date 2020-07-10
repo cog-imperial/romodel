@@ -124,8 +124,14 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     if root:
                         cp = Constraint(expr=det + sqrt(padding) <= c.upper)
                     else:
-                        cp = Constraint(expr=padding <= (c.upper() - det)**2)
-                        c_det = Constraint(expr=det <= c.upper)
+                        setattr(instance,
+                                c.name + '_padding',
+                                Var(bounds=(0, float('inf'))))
+                        pvar = getattr(instance, c.name + '_padding')
+                        cp = Constraint(expr=det + pvar <= c.upper())
+                        c_det = Constraint(expr=padding <= pvar**2)
+                        # cp = Constraint(expr=padding <= (c.upper() - det)**2)
+                        # c_det = Constraint(expr=det <= c.upper)
                         setattr(instance, c.name + '_det_upper', c_det)
                     setattr(instance, name, cp)
                 # For lower bound: det - padding >= b
