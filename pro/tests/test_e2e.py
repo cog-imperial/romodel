@@ -8,6 +8,9 @@ class TestE2E(unittest.TestCase):
         m = pro.examples.Knapsack()
         solver = pe.SolverFactory('pro.robust.reformulation')
         solver.solve(m, tee=False)
+        m = pro.examples.Knapsack()
+        m.w.uncset = m.P
+        solver.solve(m, tee=False)
 
     def test_knapsack_cuts(self):
         m = pro.examples.Knapsack()
@@ -25,12 +28,22 @@ class TestE2E(unittest.TestCase):
         solver = pe.SolverFactory('pro.robust.cuts')
         solver.solve(m, tee=False)
 
-    def test_pooling_reformulation(self):
+    def test_pooling_reformulation_ellipsoidal(self):
         m = pro.examples.Pooling()
         solver = pe.SolverFactory('pro.robust.reformulation')
+        solver.options['solver'] = 'gams'
+        solver.solve(m, tee=False)
+
+    def test_pooling_reformulation_polyhedral(self):
+        m = pro.examples.Pooling()
+        solver = pe.SolverFactory('pro.robust.reformulation')
+        solver.options['NonConvex'] = 2
+        m.price_product.uncset = m.P
         solver.solve(m, tee=False)
 
     def test_pooling_cuts(self):
         m = pro.examples.Pooling()
         solver = pe.SolverFactory('pro.robust.cuts')
+        solver.solve(m, tee=False)
+        m.price_product.uncset = m.P
         solver.solve(m, tee=False)
