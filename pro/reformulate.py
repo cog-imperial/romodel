@@ -11,6 +11,7 @@ from pro import UncParam
 from pro.visitor import _expression_is_uncertain, identify_parent_components
 from pro.generator import RobustConstraint
 from pao.duality import create_linear_dual_from
+from itertools import chain
 
 
 def solve_robust(m):
@@ -80,88 +81,28 @@ class BaseRobustTransformation(Transformation):
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
-        for c in self.get_uncertain_components(instance, component=Objective):
-            repn = self.generate_repn_param(instance, c)
-            assert repn.is_linear(), (
-                    "Constraint {} should be linear in "
-                    "unc. parameters".format(c.name))
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            # Collect unc. parameter and unc. set
             param = list(identify_parent_components(c.expr, [UncParam]))
             assert len(param) == 1, (
                     "Constraint {} should not contain more than one UncParam "
                     "component".format(c.name))
-
-            # Collect UncParam and UncSet
             param = param[0]
             uncset = param._uncset
-            assert uncset.is_ellipsoidal(), (
-                    "Uncertainty set {} is not "
-                    "ellipsoidal.".format(uncset.name))
-            # Generate robust counterpart
-            det = quicksum(x[0]*x[1].nominal for x in zip(repn.linear_coefs,
-                                                          repn.linear_vars))
-            det += repn.constant
-            param_var_dict = {id(param): var
-                              for param, var
-                              in zip(repn.linear_vars, repn.linear_coefs)}
-            # padding = sqrt( var^T * cov^-1 * var )
-            padding = quicksum(param_var_dict[id(x)]
-                               * uncset.cov[i, j]
-                               * param_var_dict[id(y)]
-                               for i, x in param.iteritems()
-                               for j, y in param.iteritems())
-            # For minimization: min det + padding
-            setattr(instance, c.name + '_epigraph', Var())
-            epigraph = getattr(instance, c.name + '_epigraph')
-            if c.is_minimizing():
-                name = c.name + '_counterpart'
-                if root:
-                    cp = Objective(expr=det + sqrt(padding), sense=minimize)
-                else:
-                    cp = Constraint(expr=padding <= (epigraph - det)**2)
-                    c_det = Constraint(expr=det <= epigraph)
-                    setattr(instance,
-                            c.name + '_det',
-                            c_det)
-                    setattr(instance,
-                            c.name + '_new',
-                            Objective(expr=epigraph, sense=minimize))
-                setattr(instance, name, cp)
-            # For maximization: max det - padding
-            if not c.is_minimizing():
-                name = c.name + '_counterpart'
-                if root:
-                    cp = Objective(expr=det - sqrt(padding), sense=maximize)
-                else:
-                    cp = Constraint(expr=padding <= (det - epigraph)**2)
-                    c_det = Constraint(expr=epigraph <= det)
-                    setattr(instance,
-                            c.name + '_det',
-                            c_det)
-                    setattr(instance,
-                            c.name + '_new',
-                            Objective(expr=epigraph, sense=maximize))
-                setattr(instance, name, cp)
-            c.deactivate()
 
-        for c in self.get_uncertain_components(instance):
+            # Check if uncertainty set is ellipsoidal
+            if not uncset.is_ellipsoidal():
+                continue
 
-            assert not c.equality, (
-                    "Currently can't handle equality constraints yet.")
+            if c.ctype is Constraint:
+                assert not c.equality, (
+                        "Currently can't handle equality constraints yet.")
             repn = self.generate_repn_param(instance, c)
             assert repn.is_linear(), (
                     "Constraint {} should be linear in "
                     "unc. parameters".format(c.name))
-            param = list(identify_parent_components(c.expr, [UncParam]))
-            assert len(param) == 1, (
-                    "Constraint {} should not contain more than one UncParam "
-                    "component".format(c.name))
-
-            # Collect UncParam and UncSet
-            param = param[0]
-            uncset = param._uncset
-            assert uncset.is_ellipsoidal(), (
-                    "Uncertainty set {} is not "
-                    "ellipsoidal.".format(uncset.name))
 
             # Generate robust counterpart
             det = quicksum(x[0]*x[1].nominal for x in zip(repn.linear_coefs,
@@ -176,26 +117,64 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                * param_var_dict[id(y)]
                                for i, x in param.iteritems()
                                for j, y in param.iteritems())
-            # For upper bound: det + padding <= b
-            if c.has_ub():
-                name = c.name + '_counterpart_upper'
-                if root:
-                    cp = Constraint(expr=det + sqrt(padding) <= c.upper)
-                else:
-                    cp = Constraint(expr=padding <= (c.upper() - det)**2)
-                    c_det = Constraint(expr=det <= c.upper)
-                    setattr(instance, c.name + '_det_upper', c_det)
-                setattr(instance, name, cp)
-            # For lower bound: det - padding >= b
-            if c.has_lb():
-                name = c.name + '_counterpart_lower'
-                if root:
-                    cp = Constraint(expr=det - sqrt(padding) >= c.lower)
-                else:
-                    cp = Constraint(expr=padding <= (det - c.lower())**2)
-                    c_det = Constraint(expr=c.lower <= det)
-                    setattr(instance, c.name + '_det_lower', c_det)
-                setattr(instance, name, cp)
+            if c.ctype is Constraint:
+                # For upper bound: det + padding <= b
+                if c.has_ub():
+                    name = c.name + '_counterpart_upper'
+                    if root:
+                        cp = Constraint(expr=det + sqrt(padding) <= c.upper)
+                    else:
+                        cp = Constraint(expr=padding <= (c.upper() - det)**2)
+                        c_det = Constraint(expr=det <= c.upper)
+                        setattr(instance, c.name + '_det_upper', c_det)
+                    setattr(instance, name, cp)
+                # For lower bound: det - padding >= b
+                if c.has_lb():
+                    name = c.name + '_counterpart_lower'
+                    if root:
+                        cp = Constraint(expr=det - sqrt(padding) >= c.lower)
+                    else:
+                        cp = Constraint(expr=padding <= (det - c.lower())**2)
+                        c_det = Constraint(expr=c.lower <= det)
+                        setattr(instance, c.name + '_det_lower', c_det)
+                    setattr(instance, name, cp)
+            else:
+                # For minimization: min det + padding
+                setattr(instance, c.name + '_epigraph', Var())
+                epigraph = getattr(instance, c.name + '_epigraph')
+                if c.is_minimizing():
+                    name = c.name + '_counterpart'
+                    if root:
+                        cp = Objective(expr=det + sqrt(padding),
+                                       sense=minimize)
+                    else:
+                        cp = Constraint(expr=padding <= (epigraph - det)**2)
+                        c_det = Constraint(expr=det <= epigraph)
+                        setattr(instance,
+                                c.name + '_det',
+                                c_det)
+                        setattr(instance,
+                                c.name + '_new',
+                                Objective(expr=epigraph,
+                                          sense=minimize))
+                    setattr(instance, name, cp)
+                # For maximization: max det - padding
+                if not c.is_minimizing():
+                    name = c.name + '_counterpart'
+                    if root:
+                        cp = Objective(expr=det - sqrt(padding),
+                                       sense=maximize)
+                    else:
+                        cp = Constraint(expr=padding <= (det - epigraph)**2)
+                        c_det = Constraint(expr=epigraph <= det)
+                        setattr(instance,
+                                c.name + '_det',
+                                c_det)
+                        setattr(instance,
+                                c.name + '_new',
+                                Objective(expr=epigraph,
+                                          sense=maximize))
+                    setattr(instance, name, cp)
             c.deactivate()
 
 
@@ -203,47 +182,78 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
-        for c in self.get_uncertain_components(instance):
-
-            assert not c.equality, (
-                    "Currently can't handle equality constraints yet.")
-            repn = self.generate_repn_param(instance, c)
-            assert repn.is_linear(), (
-                    "Constraint {} should be linear in "
-                    "unc. parameters".format(c.name))
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            # Collect UncParam and UncSet
             param = list(identify_parent_components(c.expr, [UncParam]))
             assert len(param) == 1, (
                     "Constraint {} should not contain more than one UncParam "
                     "component".format(c.name))
-
-            # Collect UncParam and UncSet
             param = param[0]
             uncset = param._uncset
-            assert uncset.is_polyhedral(), (
-                    "Uncertainty set {} is not "
-                    "polyhedral.".format(uncset.name))
+            if not uncset.is_polyhedral():
+                continue
+
+            if c.ctype is Constraint:
+                assert not c.equality, (
+                        "Currently can't handle equality constraints yet.")
+            repn = self.generate_repn_param(instance, c)
+            assert repn.is_linear(), (
+                    "Constraint {} should be linear in "
+                    "unc. parameters".format(c.name))
 
             # Create dual variables
             block = c.parent_block()
             setattr(block, c.name + '_dual', Var())
 
             # Add dual constraints d^T * v <= b, P^T * v = x
-            if c.upper:
-                uncset.obj = Objective(expr=c.body, sense=maximize)
-                dual = create_linear_dual_from(uncset, unfixed=param.values())
-                o_expr = dual.o.expr
-                del dual.o
-                dual.o = Constraint(expr=o_expr <= c.upper)
-                del uncset.obj
-                setattr(instance, c.name + '_counterpart_upper', dual)
-            if c.lower:
-                uncset.obj = Objective(expr=c.body, sense=minimize)
-                dual = create_linear_dual_from(uncset, unfixed=param.values())
-                o_expr = dual.o.expr
-                del dual.o
-                dual.o = Constraint(expr=c.lower <= o_expr)
-                del uncset.obj
-                setattr(instance, c.name + '_counterpart_lower', dual)
+            if c.ctype is Constraint:
+                if c.upper:
+                    uncset.obj = Objective(expr=c.body, sense=maximize)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=o_expr <= c.upper)
+                    del uncset.obj
+                    setattr(instance, c.name + '_counterpart_upper', dual)
+                if c.lower:
+                    uncset.obj = Objective(expr=c.body, sense=minimize)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=c.lower <= o_expr)
+                    del uncset.obj
+                    setattr(instance, c.name + '_counterpart_lower', dual)
+            else:
+                setattr(instance, c.name + '_epigraph', Var())
+                epigraph = getattr(instance, c.name + '_epigraph')
+                if c.is_minimizing():
+                    uncset.obj = Objective(expr=c.expr, sense=maximize)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=o_expr <= epigraph)
+                    del uncset.obj
+                    setattr(instance, c.name + '_counterpart', dual)
+                    setattr(instance,
+                            c.name + '_new',
+                            Objective(expr=epigraph, sense=minimize))
+                else:
+                    uncset.obj = Objective(expr=c.expr, sense=minimize)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=epigraph <= o_expr)
+                    del uncset.obj
+                    setattr(instance, c.name + '_counterpart', dual)
+                    setattr(instance,
+                            c.name + '_new',
+                            Objective(expr=epigraph, sense=maximize))
             # Deactivate original constraint
             c.deactivate()
 
