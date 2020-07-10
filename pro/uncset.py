@@ -3,6 +3,7 @@ from pyomo.core import Constraint
 from pyomo.repn import generate_standard_repn
 from pro.visitor import identify_parent_components
 from pro.uncparam import UncParam
+from collections import defaultdict
 import numpy as np
 
 
@@ -86,6 +87,7 @@ class UncSet(SimpleBlock):
         rhs = []
         param = None
         for c in self.component_data_objects(Constraint, active=True):
+            # Collect uncertain parameter
             for p in identify_parent_components(c.body, [UncParam]):
                 if param is None:
                     param = p
@@ -93,16 +95,19 @@ class UncSet(SimpleBlock):
                     assert param is p, ("Uncertainty set {} should "
                                         "only contain one UncParam "
                                         "component.".format(self.name))
+            # Generate standard repn
             repn = generate_standard_repn(c.body)
+            # If uncertainty set contains a non-linear constraint it's not
+            # polyhedral.
             if not repn.is_linear():
                 return False
             coef_dict = {id(x): y for x, y in zip(repn.linear_vars,
                                                   repn.linear_coefs)}
             if c.has_ub():
-                mat.append({i: coef_dict[id(param[i])] for i in param})
+                mat.append({i: coef_dict.get(id(param[i]), 0) for i in param})
                 rhs.append(c.upper - repn.constant)
             elif c.has_lb():
-                mat.append({i: -coef_dict[id(param[i])] for i in param})
+                mat.append({i: -coef_dict.get(id(param[i]), 0) for i in param})
                 rhs.append(repn.constant - c.lower)
         self.mat = mat
         self.rhs = rhs
