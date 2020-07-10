@@ -33,7 +33,7 @@ class TestGenerator(unittest.TestCase):
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
 
         m.rc = pro.RobustConstraint()
-        m.rc.build(m.c)
+        m.rc.build(m.c.lower, m.c.body, m.c.upper)
 
         lb, nominal, ub = m.rc.nominal_constraint_expr()
         repn = generate_standard_repn(nominal)
@@ -53,13 +53,13 @@ class TestGenerator(unittest.TestCase):
         m.U.c0 = pe.Constraint(expr=m.w[0] <= 1)
         m.U.c1 = pe.Constraint(expr=m.w[1] <= 1)
         # for i in m.w:
-        #     m.w[i].value = 0.5
+        #     m.w[i].value = 0.5.lower, m.c.expr, m.c.upper
         for i in m.x:
             m.x[i].value = 0.8
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
 
         m.rc = pro.RobustConstraint()
-        m.rc.build(m.c)
+        m.rc.build(m.c.lower, m.c.body, m.c.upper)
 
         sep = m.rc.construct_separation_problem()
         repn = generate_standard_repn(sep.obj)

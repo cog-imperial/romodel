@@ -32,14 +32,14 @@ class RobustConstraintData(_BlockData):
         self._vars = []
         self._sep = None
 
-    def build(self, cons):
+    def build(self, lower, expr, upper):
         # Collect uncertain parameter and uncertainty set
-        self.lower = cons.lower
-        self.upper = cons.upper
-        self._uncparam = _collect_uncparam(cons)
+        self.lower = lower
+        self.upper = upper
+        self._uncparam = _collect_uncparam(expr)
         self._uncset = [self._uncparam[0]._uncset]
-        self._rule = self.construct_rule(cons.body)
-        self._bounds = (cons.lower, cons.upper)
+        self._rule = self.construct_rule(expr)
+        self._bounds = (lower, upper)
         # Generate nominal constraint
         nominal_expr = self.nominal_constraint_expr()
         self._constraints = ConstraintList()
@@ -94,7 +94,7 @@ class RobustConstraintData(_BlockData):
         """ Generate the nominal constraint. """
         # TODO: replace p.value by p.nominal
         uncparam = self._uncparam[0]
-        expr = self._rule({i: uncparam[i].value for i in uncparam})
+        expr = self._rule({i: uncparam[i].nominal for i in uncparam})
         return (self._bounds[0], expr, self._bounds[1])
 
     # !!!
@@ -121,8 +121,8 @@ class RobustConstraintData(_BlockData):
         return rule
 
 
-def _collect_uncparam(c):
-    uncparam = [i for i in identify_parent_components(c.expr, [UncParam])]
+def _collect_uncparam(expr):
+    uncparam = [i for i in identify_parent_components(expr, [UncParam])]
     return uncparam
 
 
