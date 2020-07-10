@@ -44,6 +44,7 @@ class TestE2E(unittest.TestCase):
     def test_pooling_cuts(self):
         m = pro.examples.Pooling()
         solver = pe.SolverFactory('pro.robust.cuts')
+        solver.options['NonConvex'] = 2
         solver.solve(m, tee=False)
         m.price_product.uncset = m.P
         solver.solve(m, tee=False)

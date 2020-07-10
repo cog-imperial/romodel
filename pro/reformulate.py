@@ -266,6 +266,7 @@ class GeneratorTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
         self._instance = instance
         cons = self.get_uncertain_components(instance)
+        objs = self.get_uncertain_components(instance, component=Objective)
 
         tdata = instance._transformation_data['pro.robust.generators']
         tdata.generators = []
@@ -274,10 +275,31 @@ class GeneratorTransformation(BaseRobustTransformation):
             generator = RobustConstraint()
             setattr(instance, c.name + '_generator', generator)
 
-            generator.build(c)
+            generator.build(c.lower, c.body, c.upper)
             tdata.generators.append(generator)
 
             c.deactivate()
+
+        for o in objs:
+            generator = RobustConstraint()
+            setattr(instance, o.name + '_epigraph', Var())
+            epigraph = getattr(instance, o.name + '_epigraph')
+            setattr(instance, o.name + '_generator', generator)
+
+            if o.is_minimizing():
+                generator.build(None, o.expr - epigraph, 0)
+                setattr(instance,
+                        o.name + '_new',
+                        Objective(expr=epigraph, sense=minimize))
+            else:
+                generator.build(0, o.expr - epigraph, None)
+                setattr(instance,
+                        o.name + '_new',
+                        Objective(expr=epigraph, sense=maximize))
+
+            tdata.generators.append(generator)
+
+            o.deactivate()
 
     def get_generator(self, c):
         pass
