@@ -134,6 +134,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
             self.results = []
             feasible = {}
             # Solve nominal problem
+            opt.options = self.options
             results = opt.solve(instance,
                                 tee=self._tee,
                                 timelimit=self._timelimit)

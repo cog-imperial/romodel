@@ -50,6 +50,7 @@ class RobustConstraintData(_BlockData):
         sep = self.construct_separation_problem()
         # TODO: pass option
         opt = SolverFactory('gurobi')
+        opt.options['NonConvex'] = 2
         res = opt.solve(sep)
         # Check results are okay
 
