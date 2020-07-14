@@ -47,6 +47,7 @@ class TestReformulation(unittest.TestCase):
         t = EllipsoidalTransformation()
         t.apply_to(m)
         solver = SolverFactory('gurobi')
+        solver.options['NonConvex'] = 2
         solver.solve(m)
         self.assertEqual(m.value(), 25.)
 
@@ -58,6 +59,7 @@ class TestReformulation(unittest.TestCase):
         t = EllipsoidalTransformation()
         t.apply_to(m)
         solver = SolverFactory('gurobi')
+        solver.options['NonConvex'] = 2
         solver.solve(m)
         self.assertEqual(m.value(), 25.)
 

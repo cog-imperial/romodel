@@ -140,29 +140,33 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     if root:
                         cp = Constraint(expr=det - sqrt(padding) >= c.lower)
                     else:
-                        cp = Constraint(expr=padding <= (det - c.lower())**2)
-                        c_det = Constraint(expr=c.lower <= det)
+                        setattr(instance,
+                                c.name + '_padding',
+                                Var(bounds=(0, float('inf'))))
+                        pvar = getattr(instance, c.name + '_padding')
+                        cp = Constraint(expr=c.lower() <= det - pvar)
+                        c_det = Constraint(expr=padding <= pvar**2)
+                        # cp = Constraint(expr=padding <= (det - c.lower())**2)
+                        # c_det = Constraint(expr=c.lower <= det)
                         setattr(instance, c.name + '_det_lower', c_det)
                     setattr(instance, name, cp)
             else:
                 # For minimization: min det + padding
-                setattr(instance, c.name + '_epigraph', Var())
-                epigraph = getattr(instance, c.name + '_epigraph')
                 if c.is_minimizing():
                     name = c.name + '_counterpart'
                     if root:
                         cp = Objective(expr=det + sqrt(padding),
                                        sense=minimize)
                     else:
-                        cp = Constraint(expr=padding <= (epigraph - det)**2)
-                        c_det = Constraint(expr=det <= epigraph)
+                        setattr(instance,
+                                c.name + '_padding',
+                                Var(bounds=(0, float('inf'))))
+                        pvar = getattr(instance, c.name + '_padding')
+                        cp = Objective(expr=det + pvar)
+                        c_det = Constraint(expr=padding <= pvar)
                         setattr(instance,
                                 c.name + '_det',
                                 c_det)
-                        setattr(instance,
-                                c.name + '_new',
-                                Objective(expr=epigraph,
-                                          sense=minimize))
                     setattr(instance, name, cp)
                 # For maximization: max det - padding
                 if not c.is_minimizing():
@@ -171,15 +175,15 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                         cp = Objective(expr=det - sqrt(padding),
                                        sense=maximize)
                     else:
-                        cp = Constraint(expr=padding <= (det - epigraph)**2)
-                        c_det = Constraint(expr=epigraph <= det)
+                        setattr(instance,
+                                c.name + '_padding',
+                                Var(bounds=(0, float('inf'))))
+                        pvar = getattr(instance, c.name + '_padding')
+                        cp = Objective(expr=det - pvar)
+                        c_det = Constraint(expr=padding <= pvar)
                         setattr(instance,
                                 c.name + '_det',
                                 c_det)
-                        setattr(instance,
-                                c.name + '_new',
-                                Objective(expr=epigraph,
-                                          sense=maximize))
                     setattr(instance, name, cp)
             c.deactivate()
 

@@ -7,6 +7,7 @@ class TestE2E(unittest.TestCase):
     def test_knapsack_reformulation(self):
         m = pro.examples.Knapsack()
         solver = pe.SolverFactory('pro.robust.reformulation')
+        solver.options['NonConvex'] = 2
         solver.solve(m, tee=False)
         m = pro.examples.Knapsack()
         m.w.uncset = m.P
@@ -31,7 +32,7 @@ class TestE2E(unittest.TestCase):
     def test_pooling_reformulation_ellipsoidal(self):
         m = pro.examples.Pooling()
         solver = pe.SolverFactory('pro.robust.reformulation')
-        solver.options['solver'] = 'gams'
+        solver.options['NonConvex'] = 2
         solver.solve(m, tee=False)
 
     def test_pooling_reformulation_polyhedral(self):
