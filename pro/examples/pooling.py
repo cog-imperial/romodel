@@ -56,6 +56,19 @@ def Pooling():
         m.P.cons.add(m.price_product[j] - price_product[j] >= -0.01)
     m.P.cons.add((m.price_product[0] - price_product[0])
                  + (m.price_product[1] - price_product[1]) <= 0.01)
+
+    m.C = pro.UncSet()
+    m.C.cons = pe.ConstraintList()
+    for j in products:
+        m.C.cons.add(m.price_product[j] - price_product[j] <= 0.01)
+        m.C.cons.add(m.price_product[j] - price_product[j] >= -0.01)
+    m.C.cons.add((m.price_product[0] - price_product[0])
+                 + (m.price_product[1] - price_product[1]) <= 0.01)
+    expr = 0
+    for j in products:
+        expr += (m.price_product[j] - price_product[j])**2
+    m.C.cons.add(expr <= 0.1)
+
     pp = m.price_product
 
     obj = 0
