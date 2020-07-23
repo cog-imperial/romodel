@@ -14,20 +14,6 @@ from pao.duality import create_linear_dual_from
 from itertools import chain
 
 
-def solve_robust(m):
-    for c in m.component_data_objects(Constraint, active=True):
-        if contains_uncparam(c):
-            reformulate(c)
-
-
-def contains_uncparam(c):
-    pass
-
-
-def reformulate(c):
-    pass
-
-
 class BaseRobustTransformation(Transformation):
     def __init__(self):
         self._fixed_unc_params = []
@@ -70,12 +56,6 @@ class BaseRobustTransformation(Transformation):
         self.unfix_component(component=Var)
         return repn
 
-    def is_linear_in_param(self, instance, cons):
-        """ Checks if a constraint is linear in the uncertain parameters. """
-        # TODO: Check if this can lead to problems if Var components have no
-        # initial value. Are they evaluated in generate_standard_repn?
-        return self.generate_repn_param(instance, cons).is_linear()
-
 
 @TransformationFactory.register('pro.robust.ellipsoidal',
                                 doc="Ellipsoidal Counterpart")
@@ -91,6 +71,9 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     "component".format(c.name))
             param = param[0]
             uncset = param._uncset
+            assert uncset is not None, ("No uncertainty set provided for "
+                                        "uncertain parameter {}."
+                                        .format(param.name))
 
             # Check if uncertainty set is ellipsoidal
             if not uncset.is_ellipsoidal():
@@ -202,6 +185,9 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     "component".format(c.name))
             param = param[0]
             uncset = param._uncset
+            assert uncset is not None, ("No uncertainty set provided for"
+                                        "uncertain parameter {}"
+                                        .format(param.name))
             if not uncset.is_polyhedral():
                 continue
 
