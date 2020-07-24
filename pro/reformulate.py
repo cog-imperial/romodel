@@ -105,53 +105,51 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                 if c.has_ub():
                     name = c.name + '_counterpart_upper'
                     if root:
-                        cp = Constraint(expr=det + sqrt(padding) <= c.upper)
+                        expr = det + sqrt(padding) <= c.upper
+                        counterpart = Constraint(expr=expr)
                     else:
                         setattr(instance,
                                 c.name + '_padding',
                                 Var(bounds=(0, float('inf'))))
                         pvar = getattr(instance, c.name + '_padding')
-                        cp = Constraint(expr=det + pvar <= c.upper())
-                        c_det = Constraint(expr=padding <= pvar**2)
-                        # cp = Constraint(expr=padding <= (c.upper() - det)**2)
-                        # c_det = Constraint(expr=det <= c.upper)
-                        setattr(instance, c.name + '_det_upper', c_det)
-                    setattr(instance, name, cp)
+                        counterpart = Constraint(expr=det + pvar <= c.upper())
+                        deterministic = Constraint(expr=padding <= pvar**2)
+                        setattr(instance, c.name + '_det_upper', deterministic)
+                    setattr(instance, name, counterpart)
                 # For lower bound: det - padding >= b
                 if c.has_lb():
                     name = c.name + '_counterpart_lower'
                     if root:
-                        cp = Constraint(expr=det - sqrt(padding) >= c.lower)
+                        expr = det - sqrt(padding) >= c.lower
+                        counterpart = Constraint(expr=expr)
                     else:
                         setattr(instance,
                                 c.name + '_padding',
                                 Var(bounds=(0, float('inf'))))
                         pvar = getattr(instance, c.name + '_padding')
-                        cp = Constraint(expr=c.lower() <= det - pvar)
-                        c_det = Constraint(expr=padding <= pvar**2)
-                        # cp = Constraint(expr=padding <= (det - c.lower())**2)
-                        # c_det = Constraint(expr=c.lower <= det)
-                        setattr(instance, c.name + '_det_lower', c_det)
-                    setattr(instance, name, cp)
+                        counterpart = Constraint(expr=c.lower() <= det - pvar)
+                        deterministic = Constraint(expr=padding <= pvar**2)
+                        setattr(instance, c.name + '_det_lower', deterministic)
+                    setattr(instance, name, counterpart)
             else:
                 # For minimization: min det + padding
                 # For maximization: max det - padding
                 sense = c.sense
                 name = c.name + '_counterpart'
                 if root:
-                    cp = Objective(expr=det + c.sense*sqrt(padding),
-                                   sense=minimize)
+                    expr = det + c.sense*sqrt(padding)
+                    counterpart = Objective(expr=expr, sense=sense)
                 else:
                     setattr(instance,
                             c.name + '_padding',
                             Var(bounds=(0, float('inf'))))
                     pvar = getattr(instance, c.name + '_padding')
-                    cp = Objective(expr=det + sense*pvar, sense=sense)
-                    c_det = Constraint(expr=padding <= pvar)
+                    counterpart = Objective(expr=det + sense*pvar, sense=sense)
+                    deterministic = Constraint(expr=padding <= pvar)
                     setattr(instance,
                             c.name + '_det',
-                            c_det)
-                setattr(instance, name, cp)
+                            deterministic)
+                setattr(instance, name, counterpart)
             c.deactivate()
 
 
