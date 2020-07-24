@@ -135,39 +135,23 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                     setattr(instance, name, cp)
             else:
                 # For minimization: min det + padding
-                if c.is_minimizing():
-                    name = c.name + '_counterpart'
-                    if root:
-                        cp = Objective(expr=det + sqrt(padding),
-                                       sense=minimize)
-                    else:
-                        setattr(instance,
-                                c.name + '_padding',
-                                Var(bounds=(0, float('inf'))))
-                        pvar = getattr(instance, c.name + '_padding')
-                        cp = Objective(expr=det + pvar)
-                        c_det = Constraint(expr=padding <= pvar)
-                        setattr(instance,
-                                c.name + '_det',
-                                c_det)
-                    setattr(instance, name, cp)
                 # For maximization: max det - padding
-                if not c.is_minimizing():
-                    name = c.name + '_counterpart'
-                    if root:
-                        cp = Objective(expr=det - sqrt(padding),
-                                       sense=maximize)
-                    else:
-                        setattr(instance,
-                                c.name + '_padding',
-                                Var(bounds=(0, float('inf'))))
-                        pvar = getattr(instance, c.name + '_padding')
-                        cp = Objective(expr=det - pvar)
-                        c_det = Constraint(expr=padding <= pvar)
-                        setattr(instance,
-                                c.name + '_det',
-                                c_det)
-                    setattr(instance, name, cp)
+                sense = c.sense
+                name = c.name + '_counterpart'
+                if root:
+                    cp = Objective(expr=det + c.sense*sqrt(padding),
+                                   sense=minimize)
+                else:
+                    setattr(instance,
+                            c.name + '_padding',
+                            Var(bounds=(0, float('inf'))))
+                    pvar = getattr(instance, c.name + '_padding')
+                    cp = Objective(expr=det + sense*pvar, sense=sense)
+                    c_det = Constraint(expr=padding <= pvar)
+                    setattr(instance,
+                            c.name + '_det',
+                            c_det)
+                setattr(instance, name, cp)
             c.deactivate()
 
 
