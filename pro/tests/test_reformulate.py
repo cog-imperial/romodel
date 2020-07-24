@@ -151,7 +151,7 @@ class TestReformulation(unittest.TestCase):
         m.cons = pe.Constraint(expr=2 <= expr)
         m.obj = pe.Objective(expr=m.x[0], sense=pe.minimize)
         t = pro.EllipsoidalTransformation()
-        t.apply_to(m)
+        t.apply_to(m, root=False)
         self.assertFalse(m.cons.active)
         self.assertTrue(hasattr(m, 'cons_counterpart_lower'))
 
@@ -174,7 +174,6 @@ class TestReformulation(unittest.TestCase):
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
         self.assertTrue(hasattr(m, 'obj_padding'))
-        self.assertTrue(hasattr(m, 'obj_det'))
         self.assertIs(m.obj_counterpart.sense, pe.minimize)
 
     def test_ellipsoidal_objective_max(self):
@@ -197,6 +196,69 @@ class TestReformulation(unittest.TestCase):
         self.assertTrue(hasattr(m, 'obj_counterpart'))
         self.assertTrue(hasattr(m, 'obj_det'))
         self.assertTrue(hasattr(m, 'obj_padding'))
+        self.assertIs(m.obj_counterpart.sense, pe.maximize)
+
+    def test_ellipsoidal_cons_lb_root(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(range(2))
+        m.U = pro.UncSet()
+        m.w = pro.UncParam(range(2), nominal=(1, 2), uncset=m.U)
+        expr = ((m.w[0] - 1)**2
+                + 0.1*(m.w[0] - 1)*(m.w[1] - 2)
+                + (m.w[1] - 2)**2
+                <= 0.1)
+        m.U.cons = pe.Constraint(expr=expr)
+
+        expr = pe.sum_product(m.w, m.x)
+        m.cons = pe.Constraint(expr=2 <= expr)
+        m.obj = pe.Objective(expr=m.x[0], sense=pe.minimize)
+        t = pro.EllipsoidalTransformation()
+        t.apply_to(m, root=True)
+        self.assertFalse(m.cons.active)
+        self.assertTrue(hasattr(m, 'cons_counterpart_lower'))
+
+    def test_ellipsoidal_obj_min_root(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(range(2))
+        m.U = pro.UncSet()
+        m.w = pro.UncParam(range(2), nominal=(1, 2), uncset=m.U)
+        expr = ((m.w[0] - 1)**2
+                + 0.1*(m.w[0] - 1)*(m.w[1] - 2)
+                + (m.w[1] - 2)**2
+                <= 0.1)
+        m.U.cons = pe.Constraint(expr=expr)
+
+        expr = pe.sum_product(m.w, m.x)
+        m.obj = pe.Objective(expr=expr, sense=pe.minimize)
+        m.cons = pe.Constraint(expr=pe.quicksum(m.x[i] for i in m.x) >= 4)
+        t = pro.EllipsoidalTransformation()
+        t.apply_to(m, root=True)
+        self.assertFalse(m.obj.active)
+        self.assertTrue(hasattr(m, 'obj_counterpart'))
+        self.assertFalse(hasattr(m, 'obj_padding'))
+        self.assertFalse(hasattr(m, 'obj_det'))
+        self.assertIs(m.obj_counterpart.sense, pe.minimize)
+
+    def test_ellipsoidal_obj_max_root(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(range(2))
+        m.U = pro.UncSet()
+        m.w = pro.UncParam(range(2), nominal=(1, 2), uncset=m.U)
+        expr = ((m.w[0] - 1)**2
+                + 0.1*(m.w[0] - 1)*(m.w[1] - 2)
+                + (m.w[1] - 2)**2
+                <= 0.1)
+        m.U.cons = pe.Constraint(expr=expr)
+
+        expr = pe.sum_product(m.w, m.x)
+        m.obj = pe.Objective(expr=expr, sense=pe.maximize)
+        m.cons = pe.Constraint(expr=pe.quicksum(m.x[i] for i in m.x) <= 4)
+        t = pro.EllipsoidalTransformation()
+        t.apply_to(m, root=True)
+        self.assertFalse(m.obj.active)
+        self.assertTrue(hasattr(m, 'obj_counterpart'))
+        self.assertFalse(hasattr(m, 'obj_det'))
+        self.assertFalse(hasattr(m, 'obj_padding'))
         self.assertIs(m.obj_counterpart.sense, pe.maximize)
 
     def test_ellipsoidal_lib_root(self):
