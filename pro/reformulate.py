@@ -12,7 +12,7 @@ from pro.generator import RobustConstraint
 from pao.duality import create_linear_dual_from
 from itertools import chain
 from pro.util import collect_uncparam
-
+from pyomo.core.expr.visitor import replace_expressions
 
 class BaseRobustTransformation(Transformation):
     def __init__(self):
@@ -276,3 +276,23 @@ class GeneratorTransformation(BaseRobustTransformation):
 
     def get_uncset(self, c):
         pass
+
+
+class NominalTransformation(BaseRobustTransformation):
+    def _apply_to(self, instance):
+        cons = self.get_uncertain_components(instance)
+        objs = self.get_uncertain_components(instance, component=Objective)
+
+        smap = {}
+
+        for c in cons:
+            param = collect_uncparam(c)
+            for i in param:
+                smap[id(param[i])] = param[i].nominal
+            replace_expressions(c, smap)
+
+        for o in objs:
+            param = collect_uncparam(o)
+            for i in param:
+                smap[id(param[i])] = param[i].nominal
+            replace_expressions(o, smap)

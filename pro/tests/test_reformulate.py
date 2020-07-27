@@ -3,8 +3,10 @@ import pyomo.environ as pe
 import pro.examples
 import pro
 from pro.reformulate import (EllipsoidalTransformation,
-                             PolyhedralTransformation)
+                             PolyhedralTransformation,
+                             NominalTransformation)
 from pyomo.opt import check_available_solvers
+from pyomo.repn import generate_standard_repn
 
 solvers = check_available_solvers('gurobi')
 
@@ -318,6 +320,25 @@ class TestReformulation(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x[0], sense=pe.maximize)
         solver = pe.SolverFactory('pro.robust.reformulation')
         self.assertRaises(AssertionError, lambda: solver.solve(m))
+
+    def test_nominal_transform(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var(range(2))
+        m.u = pro.UncParam(nominal=3.)
+        m.w = pro.UncParam(range(2), nominal=[1, 2])
+        m.c = pe.Constraint(expr=m.y[0]*m.w[0] + m.y[1]*m.w[1] <= 1)
+        m.o = pe.Objective(expr=m.u**2*m.x**2)
+        t = NominalTransformation()
+        t.apply_to(m)
+        repn = generate_standard_repn(m.c.body)
+        baseline = {id(m.y[0]): 1,
+                    id(m.y[1]): 2}
+        for v, c in zip(repn.linear_vars, repn.linear_coefs):
+            self.assertEqual(baseline[id(v)], c)
+
+        repn = generate_standard_repn(m.o.expr)
+        self.assertEqual(repn.quadratic_coefs[0], 3.**2)
 
 
 if __name__ == "__main__":
