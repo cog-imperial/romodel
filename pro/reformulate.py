@@ -7,11 +7,11 @@ from pyomo.environ import (Constraint,
                            minimize)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
-from pro import UncParam
-from pro.visitor import _expression_is_uncertain, identify_parent_components
+from pro.visitor import _expression_is_uncertain
 from pro.generator import RobustConstraint
 from pao.duality import create_linear_dual_from
 from itertools import chain
+from pro.util import collect_uncparam
 
 
 class BaseRobustTransformation(Transformation):
@@ -65,11 +65,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
             # Collect unc. parameter and unc. set
-            param = list(identify_parent_components(c.expr, [UncParam]))
-            assert len(param) == 1, (
-                    "Constraint {} should not contain more than one UncParam "
-                    "component".format(c.name))
-            param = param[0]
+            param = collect_uncparam(c)
             uncset = param._uncset
             assert uncset is not None, ("No uncertainty set provided for "
                                         "uncertain parameter {}."
@@ -161,11 +157,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
             # Collect UncParam and UncSet
-            param = list(identify_parent_components(c.expr, [UncParam]))
-            assert len(param) == 1, (
-                    "Constraint {} should not contain more than one UncParam "
-                    "component".format(c.name))
-            param = param[0]
+            param = collect_uncparam(c)
             uncset = param._uncset
             assert uncset is not None, ("No uncertainty set provided for"
                                         "uncertain parameter {}"
