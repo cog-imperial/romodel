@@ -14,6 +14,7 @@ from itertools import chain
 from pro.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
 
+
 class BaseRobustTransformation(Transformation):
     def __init__(self):
         self._fixed_unc_params = []
@@ -278,6 +279,8 @@ class GeneratorTransformation(BaseRobustTransformation):
         pass
 
 
+@TransformationFactory.register('pro.nominal',
+                                doc="Transform robust to nominal model.")
 class NominalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
         cons = self.get_uncertain_components(instance)
@@ -285,8 +288,16 @@ class NominalTransformation(BaseRobustTransformation):
 
         smap = {}
 
-        for c in chain(cons, objs):
+        for c in cons:
             param = collect_uncparam(c)
             for i in param:
                 smap[id(param[i])] = param[i].nominal
-            replace_expressions(c, smap)
+            body_nominal = replace_expressions(c.body, smap)
+            c.set_value((c.lower, body_nominal, c.upper))
+
+        for o in objs:
+            param = collect_uncparam(o)
+            for i in param:
+                smap[id(param[i])] = param[i].nominal
+            expr_nominal = replace_expressions(o.expr, smap)
+            o.expr = expr_nominal

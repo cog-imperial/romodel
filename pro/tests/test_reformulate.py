@@ -329,15 +329,21 @@ class TestReformulation(unittest.TestCase):
         m.w = pro.UncParam(range(2), nominal=[1, 2])
         m.c = pe.Constraint(expr=m.y[0]*m.w[0] + m.y[1]*m.w[1] <= 1)
         m.o = pe.Objective(expr=m.u**2*m.x**2)
-        t = NominalTransformation()
+        t = pe.TransformationFactory('pro.nominal')
         t.apply_to(m)
         repn = generate_standard_repn(m.c.body)
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertEqual(len(repn.quadratic_vars), 0)
+        self.assertIsNone(repn.nonlinear_expr)
         baseline = {id(m.y[0]): 1,
                     id(m.y[1]): 2}
         for v, c in zip(repn.linear_vars, repn.linear_coefs):
             self.assertEqual(baseline[id(v)], c)
 
-        repn = generate_standard_repn(m.o.expr)
+        repn = generate_standard_repn(m.o.expr, compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.quadratic_vars), 1)
+        self.assertIsNone(repn.nonlinear_expr)
         self.assertEqual(repn.quadratic_coefs[0], 3.**2)
 
 
