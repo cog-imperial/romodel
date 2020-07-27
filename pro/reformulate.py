@@ -285,14 +285,8 @@ class NominalTransformation(BaseRobustTransformation):
 
         smap = {}
 
-        for c in cons:
+        for c in chain(cons, objs):
             param = collect_uncparam(c)
             for i in param:
                 smap[id(param[i])] = param[i].nominal
             replace_expressions(c, smap)
-
-        for o in objs:
-            param = collect_uncparam(o)
-            for i in param:
-                smap[id(param[i])] = param[i].nominal
-            replace_expressions(o, smap)
