@@ -159,10 +159,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                                                      component=Objective)):
             # Collect UncParam and UncSet
             param = collect_uncparam(c)
-            uncset = param._uncset
-            assert uncset is not None, ("No uncertainty set provided for"
-                                        "uncertain parameter {}"
-                                        .format(param.name))
+            uncset = param.uncset
             if not uncset.is_polyhedral():
                 continue
 
@@ -179,7 +176,9 @@ class PolyhedralTransformation(BaseRobustTransformation):
             setattr(block, c.name + '_dual', Var())
 
             # Add dual constraints d^T * v <= b, P^T * v = x
+            # Constraint
             if c.ctype is Constraint:
+                # LEQ
                 if c.upper:
                     uncset.obj = Objective(expr=c.body, sense=maximize)
                     dual = create_linear_dual_from(uncset,
@@ -189,6 +188,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     dual.o = Constraint(expr=o_expr <= c.upper)
                     del uncset.obj
                     setattr(instance, c.name + '_counterpart_upper', dual)
+                # GEQ
                 if c.lower:
                     uncset.obj = Objective(expr=c.body, sense=minimize)
                     dual = create_linear_dual_from(uncset,
@@ -198,33 +198,22 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     dual.o = Constraint(expr=c.lower <= o_expr)
                     del uncset.obj
                     setattr(instance, c.name + '_counterpart_lower', dual)
+            # Objective
             else:
                 setattr(instance, c.name + '_epigraph', Var())
                 epigraph = getattr(instance, c.name + '_epigraph')
-                if c.is_minimizing():
-                    uncset.obj = Objective(expr=c.expr, sense=maximize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=o_expr <= epigraph)
-                    del uncset.obj
-                    setattr(instance, c.name + '_counterpart', dual)
-                    setattr(instance,
-                            c.name + '_new',
-                            Objective(expr=epigraph, sense=minimize))
-                else:
-                    uncset.obj = Objective(expr=c.expr, sense=minimize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=epigraph <= o_expr)
-                    del uncset.obj
-                    setattr(instance, c.name + '_counterpart', dual)
-                    setattr(instance,
-                            c.name + '_new',
-                            Objective(expr=epigraph, sense=maximize))
+                sense = c.sense
+                uncset.obj = Objective(expr=c.expr, sense=-sense)
+                dual = create_linear_dual_from(uncset,
+                                               unfixed=param.values())
+                o_expr = dual.o.expr
+                del dual.o
+                dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
+                del uncset.obj
+                setattr(instance, c.name + '_counterpart', dual)
+                setattr(instance,
+                        c.name + '_new',
+                        Objective(expr=epigraph, sense=sense))
             # Deactivate original constraint
             c.deactivate()
 

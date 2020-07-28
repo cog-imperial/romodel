@@ -51,6 +51,9 @@ class UncParam_old(Var):
 
     @property
     def uncset(self):
+        assert self._uncset is not None, ('No uncertainty set provided for'
+                                          'uncertain parameter {}'
+                                          .format(self.name))
         return self._uncset
 
     @uncset.setter
