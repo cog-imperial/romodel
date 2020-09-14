@@ -14,8 +14,8 @@
 
 from pyomo.environ import ConcreteModel, Set, Binary, Var, Constraint
 from pyomo.environ import Objective, maximize, ConstraintList
-from pro import UncSet, UncParam
-from pro.uncset import EllipsoidalSet, PolyhedralSet
+from romodel import UncSet, UncParam
+from romodel.uncset import EllipsoidalSet, PolyhedralSet
 import itertools
 
 

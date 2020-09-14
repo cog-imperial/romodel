@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pro
+import romodel as ro
 
 
 def Portfolio():
@@ -13,8 +13,8 @@ def Portfolio():
     m.x = pe.Var(index, bounds=(0, 1))
     m.z = pe.Var(within=pe.PositiveReals)
 
-    m.U = pro.UncSet()
-    m.r = pro.UncParam(index, uncset=m.U, nominal=mean)
+    m.U = ro.UncSet()
+    m.r = ro.UncParam(index, uncset=m.U, nominal=mean)
     r = m.r
     expr = 0
     for i in index:

@@ -11,8 +11,8 @@ from pyomo.environ import (ConstraintList,
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.repn import generate_standard_repn
-from pro import UncParam
-from pro.visitor import identify_parent_components
+from romodel import UncParam
+from romodel.visitor import identify_parent_components
 from collections import defaultdict
 
 

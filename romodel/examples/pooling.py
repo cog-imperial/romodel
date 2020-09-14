@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pro
+import romodel as ro
 
 feeds = range(5)
 products = range(4)
@@ -42,14 +42,14 @@ def Pooling():
     m.y = pe.Var(con_pool_prod, within=pe.NonNegativeReals)
     m.z = pe.Var(con_feed_prod, within=pe.NonNegativeReals)
 
-    m.U = pro.UncSet()
-    m.price_product = pro.UncParam(products, nominal=price_product, uncset=m.U)
+    m.U = ro.UncSet()
+    m.price_product = ro.UncParam(products, nominal=price_product, uncset=m.U)
     expr = 0
     for j in products:
         expr += (m.price_product[j] - price_product[j])**2
     m.U.c = pe.Constraint(expr=expr <= 0.1)
 
-    m.P = pro.UncSet()
+    m.P = ro.UncSet()
     m.P.cons = pe.ConstraintList()
     for j in products:
         m.P.cons.add(m.price_product[j] - price_product[j] <= 0.01)
@@ -57,7 +57,7 @@ def Pooling():
     m.P.cons.add((m.price_product[0] - price_product[0])
                  + (m.price_product[1] - price_product[1]) <= 0.01)
 
-    m.C = pro.UncSet()
+    m.C = ro.UncSet()
     m.C.cons = pe.ConstraintList()
     for j in products:
         m.C.cons.add(m.price_product[j] - price_product[j] <= 0.01)
@@ -158,7 +158,7 @@ def prod_quality_rule_lower(m, j, k):
 
 if __name__ == '__main__':
     m = Pooling()
-    solver = pe.SolverFactory('pro.robust.cuts')
+    solver = pe.SolverFactory('romodel.robust.cuts')
     # solver = pe.SolverFactory('gurobi')
     solver.options['NonConvex'] = 2
     solver.solve(m, tee=True)

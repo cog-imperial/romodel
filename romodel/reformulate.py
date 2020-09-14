@@ -7,11 +7,11 @@ from pyomo.environ import (Constraint,
                            minimize)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
-from pro.visitor import _expression_is_uncertain
-from pro.generator import RobustConstraint
+from romodel.visitor import _expression_is_uncertain
+from romodel.generator import RobustConstraint
 from pao.duality import create_linear_dual_from
 from itertools import chain
-from pro.util import collect_uncparam
+from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
 
 
@@ -58,7 +58,7 @@ class BaseRobustTransformation(Transformation):
         return repn
 
 
-@TransformationFactory.register('pro.robust.ellipsoidal',
+@TransformationFactory.register('romodel.ellipsoidal',
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
@@ -150,7 +150,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
             c.deactivate()
 
 
-@TransformationFactory.register('pro.robust.polyhedral',
+@TransformationFactory.register('romodel.polyhedral',
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
@@ -218,7 +218,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
             c.deactivate()
 
 
-@TransformationFactory.register('pro.robust.generators',
+@TransformationFactory.register('romodel.generators',
                                 doc=("Replace uncertain constraints by"
                                      " cutting plane generators"))
 class GeneratorTransformation(BaseRobustTransformation):
@@ -228,7 +228,7 @@ class GeneratorTransformation(BaseRobustTransformation):
         cons = self.get_uncertain_components(instance)
         objs = self.get_uncertain_components(instance, component=Objective)
 
-        tdata = instance._transformation_data['pro.robust.generators']
+        tdata = instance._transformation_data['romodel.generators']
         tdata.generators = []
 
         for c in cons:
@@ -268,7 +268,7 @@ class GeneratorTransformation(BaseRobustTransformation):
         pass
 
 
-@TransformationFactory.register('pro.nominal',
+@TransformationFactory.register('romodel.nominal',
                                 doc="Transform robust to nominal model.")
 class NominalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):

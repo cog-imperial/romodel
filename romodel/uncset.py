@@ -1,8 +1,8 @@
 from pyomo.core import SimpleBlock, ModelComponentFactory, Component
 from pyomo.core import Constraint
 from pyomo.repn import generate_standard_repn
-from pro.visitor import identify_parent_components
-from pro.uncparam import UncParam
+from romodel.visitor import identify_parent_components
+from romodel.uncparam import UncParam
 from collections import defaultdict
 import numpy as np
 

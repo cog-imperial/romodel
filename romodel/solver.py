@@ -5,7 +5,7 @@ import pyomo.opt
 from pyomo.core import TransformationFactory
 
 
-@pyomo.opt.SolverFactory.register('pro.robust.reformulation',
+@pyomo.opt.SolverFactory.register('romodel.reformulation',
                                   doc='Robust reformulation solver.')
 class ReformulationSolver(pyomo.opt.OptSolver):
     """
@@ -14,7 +14,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
     """
 
     def __init__(self, **kwargs):
-        kwargs['type'] = 'pro.robust.reformulation'
+        kwargs['type'] = 'romodel.reformulation'
         pyomo.opt.OptSolver.__init__(self, **kwargs)
         self._metasolver = True
 
@@ -27,14 +27,14 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         instance = self._instance
 
         # Either:
-        transformations = ['pro.robust.ellipsoidal',
-                           'pro.robust.polyhedral']
+        transformations = ['romodel.ellipsoidal',
+                           'romodel.polyhedral']
         for transform in transformations:
             xfrm = TransformationFactory(transform)
             xfrm.apply_to(instance)
 
         # Or:
-        # xfrm = TransformationFactory('pro.robust.reformulation')
+        # xfrm = TransformationFactory('romodel.reformulation')
         # xfrm.apply_to(instance)
 
         if not self.options.solver:
@@ -102,11 +102,11 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         return results
 
 
-@pyomo.opt.SolverFactory.register('pro.robust.cuts',
+@pyomo.opt.SolverFactory.register('romodel.cuts',
                                   doc='Robust cutting plane solver.')
 class CuttingPlaneSolver(pyomo.opt.OptSolver):
     def __init__(self, **kwargs):
-        kwargs['type'] = 'pro.robust.cuts'
+        kwargs['type'] = 'romodel.cuts'
         pyomo.opt.OptSolver.__init__(self, **kwargs)
         self._metasolver = True
 
@@ -118,9 +118,9 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         start_time = time.time()
         instance = self._instance
 
-        xfrm = TransformationFactory('pro.robust.generators')
+        xfrm = TransformationFactory('romodel.generators')
         xfrm.apply_to(instance)
-        tdata = instance._transformation_data['pro.robust.generators']
+        tdata = instance._transformation_data['romodel.generators']
         generators = tdata.generators
 
         # Need to set this up for main and sub solver
@@ -207,11 +207,11 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         return results
 
 
-@pyomo.opt.SolverFactory.register('pro.nominal',
+@pyomo.opt.SolverFactory.register('romodel.nominal',
                                   doc='Nominal solver.')
 class NominalSolver(pyomo.opt.OptSolver):
     def __init__(self, **kwargs):
-        kwargs['type'] = 'pro.nominal'
+        kwargs['type'] = 'romodel.nominal'
         pyomo.opt.OptSolver.__init__(self, **kwargs)
         self._metasolver = True
 
@@ -223,7 +223,7 @@ class NominalSolver(pyomo.opt.OptSolver):
         start_time = time.time()
         instance = self._instance
 
-        xfrm = TransformationFactory('pro.nominal')
+        xfrm = TransformationFactory('romodel.nominal')
         xfrm.apply_to(instance)
 
         if not self.options.solver:

@@ -1,7 +1,7 @@
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 from pyomo.core.expr.visitor import SimpleExpressionVisitor
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_types
-from pro.uncparam import UncParam
+from romodel.uncparam import UncParam
 
 
 class _IsUncertainVisitor(ExpressionValueVisitor):

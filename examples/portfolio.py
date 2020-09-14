@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pro
+import romodel as ro
 
 
 m = pe.ConcreteModel()
@@ -16,8 +16,8 @@ mean = [0.1, 0.3, 0.5, 0.7, 0.4]
 m.x = pe.Var(index, bounds=(0, 1))
 m.z = pe.Var(within=pe.PositiveReals)
 
-m.U = pro.UncSet()
-m.r = pro.UncParam(index, uncset=m.U)
+m.U = ro.UncSet()
+m.r = ro.UncParam(index, uncset=m.U)
 for i in index:
     m.r[i].value = mean[i]
 r = m.r
@@ -33,7 +33,6 @@ expr = sum([m.x[i] for i in index]) == 1
 m.cons.add(expr)
 m.cons.add(-sum([r[i]*m.x[i] for i in index]) <= -m.z)
 
-import ipdb; ipdb.set_trace()
 solver = pe.SolverFactory('gurobi')
-solver = pe.SolverFactory('pro.robust.cuts')
+solver = pe.SolverFactory('romodel.robust.cuts')
 solver.solve(m)

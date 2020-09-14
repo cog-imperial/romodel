@@ -1,13 +1,13 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
-import pro.examples
-import pro
+import romodel.examples
+import romodel
 
 
 class TestNominalSolver(unittest.TestCase):
     def test_nominal_solver(self):
-        m = pro.examples.Knapsack()
-        opt = pe.SolverFactory('pro.nominal')
+        m = romodel.examples.Knapsack()
+        opt = pe.SolverFactory('romodel.nominal')
         opt.solve(m)
 
         self.assertEqual(m.value(), 25)

@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pro
+import romodel as ro
 
 feeds = range(5)
 products = range(4)
@@ -38,8 +38,8 @@ m.q = pe.Var(con_feed_pool, bounds=(0, 1))
 m.y = pe.Var(con_pool_prod, within=pe.NonNegativeReals)
 m.z = pe.Var(con_feed_prod, within=pe.NonNegativeReals)
 
-m.U = pro.UncSet()
-m.price_product = pro.UncParam(products, nominal=price_product, uncset=m.U)
+m.U = ro.UncSet()
+m.price_product = ro.UncParam(products, nominal=price_product, uncset=m.U)
 expr = 0
 for j in products:
     expr += (m.price_product[j] - price_product[j])**2
@@ -137,7 +137,7 @@ m.prod_quality_upper = pe.Constraint(products, qualities,
 m.prod_quality_lower = pe.Constraint(products, qualities,
                                      rule=prod_quality_rule_lower)
 
-solver = pe.SolverFactory('pro.robust.cuts')
+solver = pe.SolverFactory('romodel.robust.cuts')
 # solver = pe.SolverFactory('gurobi')
 solver.options['NonConvex'] = 2
 solver.solve(m, tee=True)
