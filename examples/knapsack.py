@@ -71,6 +71,6 @@ M.weight = Constraint(expr=sum(w[i]*M.x[i] for i in M.ITEMS) <= limit)
 # Set UncSet
 M.w.uncset = M.P
 
-solver = SolverFactory('pro.robust.reformulation')
+solver = SolverFactory('romodel.reformulation')
 solver.solve(M, options={'solver': 'gurobi'})
 M.pprint()

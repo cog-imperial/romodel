@@ -137,7 +137,6 @@ m.prod_quality_upper = pe.Constraint(products, qualities,
 m.prod_quality_lower = pe.Constraint(products, qualities,
                                      rule=prod_quality_rule_lower)
 
-solver = pe.SolverFactory('romodel.robust.cuts')
-# solver = pe.SolverFactory('gurobi')
+solver = pe.SolverFactory('romodel.cuts')
 solver.options['NonConvex'] = 2
 solver.solve(m, tee=True)

@@ -34,5 +34,5 @@ m.cons.add(expr)
 m.cons.add(-sum([r[i]*m.x[i] for i in index]) <= -m.z)
 
 solver = pe.SolverFactory('gurobi')
-solver = pe.SolverFactory('romodel.robust.cuts')
+solver = pe.SolverFactory('romodel.cuts')
 solver.solve(m)
