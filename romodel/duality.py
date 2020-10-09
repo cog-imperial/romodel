@@ -8,6 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+#  ----------------------
+#
+#  I've taken this file from the PAO repository so that we don't have to add
+#  PAO as a dependency just for this function while it's still under heavy
+#  development.
+#
+#  ----------------------
+
 """
 pao.duality.collect
 
