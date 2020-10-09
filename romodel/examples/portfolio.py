@@ -34,5 +34,5 @@ def Portfolio():
 if __name__ == '__main__':
     m = Portfolio()
     solver = pe.SolverFactory('gurobi')
-    solver = pe.SolverFactory('pro.robust.cuts')
+    solver = pe.SolverFactory('pro.cuts')
     solver.solve(m)
