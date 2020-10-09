@@ -39,7 +39,7 @@ class TestE2E(unittest.TestCase):
         m = romodel.examples.Pooling()
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['NonConvex'] = 2
-        m.price_romodelduct.uncset = m.P
+        m.price_product.uncset = m.P
         solver.solve(m, tee=False)
 
     def test_pooling_cuts(self):

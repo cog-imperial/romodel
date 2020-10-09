@@ -3,7 +3,6 @@ from pyomo.core import Constraint
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import identify_parent_components
 from romodel.uncparam import UncParam
-from collections import defaultdict
 import numpy as np
 
 
@@ -50,10 +49,8 @@ class UncSet(SimpleBlock):
         else:
             self._param = _param
 
-        # if isinstance(_var, Component):
-        #     self._var = [_var]
-        # else:
-        #     self._var = _var
+        self._lib = False
+
 
     def is_ellipsoidal(self):
         # TODO: assumes there is only one constraint on UncSet
@@ -113,6 +110,13 @@ class UncSet(SimpleBlock):
         self.rhs = rhs
         return True
 
+    def is_empty(self):
+        if self._lib:
+            return False
+        for c in self.component_data_objects(Constraint, active=True):
+            return False
+        return True
+
     def get_uncertain_param(self):
         param = None
         for p in self.component_objects(UncParam, active=True):
@@ -133,6 +137,7 @@ class EllipsoidalSet(UncSet):
         self.cov = cov
         self.rhs = rhs
         super().__init__(*args, **kwargs)
+        self._lib = True
 
     def is_ellipsoidal(self):
         return True
@@ -150,6 +155,7 @@ class PolyhedralSet(UncSet):
         self.mat = mat
         self.rhs = rhs
         super().__init__(*args, **kwargs)
+        self._lib = True
 
     def is_polyhedral(self):
         return True

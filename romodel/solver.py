@@ -26,16 +26,12 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         start_time = time.time()
         instance = self._instance
 
-        # Either:
         transformations = ['romodel.ellipsoidal',
-                           'romodel.polyhedral']
+                           'romodel.polyhedral',
+                           'romodel.unknown']
         for transform in transformations:
             xfrm = TransformationFactory(transform)
             xfrm.apply_to(instance)
-
-        # Or:
-        # xfrm = TransformationFactory('romodel.reformulation')
-        # xfrm.apply_to(instance)
 
         if not self.options.solver:
             solver = 'gurobi'

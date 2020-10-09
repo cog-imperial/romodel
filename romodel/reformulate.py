@@ -9,7 +9,7 @@ from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
 from romodel.generator import RobustConstraint
-from pao.duality import create_linear_dual_from
+from romodel.duality import create_linear_dual_from
 from itertools import chain
 from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
@@ -72,6 +72,9 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                         "uncertain parameter {}."
                                         .format(param.name))
 
+            # Check if uncertainty set is empty
+            assert not uncset.is_empty(), ("{} does not have any "
+                                           "constraints.".format(uncset.name))
             # Check if uncertainty set is ellipsoidal
             if not uncset.is_ellipsoidal():
                 continue
@@ -160,6 +163,10 @@ class PolyhedralTransformation(BaseRobustTransformation):
             # Collect UncParam and UncSet
             param = collect_uncparam(c)
             uncset = param.uncset
+            # Check if uncertainty set is empty
+            assert not uncset.is_empty(), ("{} does not have any "
+                                           "constraints.".format(uncset.name))
+            # Check if uncertainty set is polyhedral
             if not uncset.is_polyhedral():
                 continue
 
@@ -290,3 +297,17 @@ class NominalTransformation(BaseRobustTransformation):
                 smap[id(param[i])] = param[i].nominal
             expr_nominal = replace_expressions(o.expr, smap)
             o.expr = expr_nominal
+
+
+@TransformationFactory.register('romodel.unknown',
+                                doc="Check for unknown uncertainty sets.")
+class UnknownTransformation(BaseRobustTransformation):
+    def _apply_to(self, instance):
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            # Collect UncParam and UncSet
+            param = collect_uncparam(c)
+            uncset = param.uncset
+            raise RuntimeError("Cannot reformulate UncSet with unknown "
+                               "geometry: {}".format(uncset.name))
