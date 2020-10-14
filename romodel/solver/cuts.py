@@ -25,6 +25,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         xfrm.apply_to(instance)
         tdata = instance._transformation_data['romodel.generators']
         generators = tdata.generators
+        print("Adding {} cutting plane generators.".format(len(generators)))
 
         # Need to set this up for main and sub solver
         if not self.options.solver:
@@ -33,10 +34,13 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         else:
             solver = self.options.solver
 
+        print("Using solver {}\n".format(solver))
+
         with pyomo.opt.SolverFactory(solver) as opt:
             self.results = []
             feasible = {}
             # Solve nominal problem
+            print("Solving nominal problem.\n")
             opt.options = self.options
             results = opt.solve(instance,
                                 tee=self._tee,
@@ -44,7 +48,11 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
             # Add initial cut to check feasibility
             for g in generators:
                 feasible[g.name] = g.add_cut()
+            feas, total = sum(feasible.values()), len(feasible)
+            print("{0}/{1} constraints robustly feasible. "
+                  "Add cuts and resolve.".format(feas, total))
             # Keep adding cuts until feasible
+            n_iter = 1
             while not all(feasible.values()):
                 results = opt.solve(instance,
                                     tee=self._tee,
@@ -54,6 +62,14 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                     if not feasible[g.name]:
                         feasible[g.name] = g.add_cut()
                 self.results.append(results)
+
+                n_iter += 1
+                feas, total = sum(feasible.values()), len(feasible)
+                print("{0}/{1} constraints robustly feasible. "
+                      "Add cuts and resolve.".format(feas, total))
+
+            print("\nAll constraints robustly feasible after {} "
+                  "iterations.".format(n_iter))
 
         stop_time = time.time()
         self.wall_time = stop_time - start_time
