@@ -159,6 +159,5 @@ def prod_quality_rule_lower(m, j, k):
 if __name__ == '__main__':
     m = Pooling()
     solver = pe.SolverFactory('romodel.cuts')
-    # solver = pe.SolverFactory('gurobi')
     solver.options['NonConvex'] = 2
-    # solver.solve(m, tee=True)
+    solver.solve(m)

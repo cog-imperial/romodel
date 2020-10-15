@@ -13,7 +13,7 @@
 #
 
 from pyomo.environ import ConcreteModel, Set, Binary, Var, Constraint
-from pyomo.environ import Objective, maximize, ConstraintList
+from pyomo.environ import Objective, maximize, ConstraintList, SolverFactory
 from romodel import UncSet, UncParam
 from romodel.uncset import EllipsoidalSet, PolyhedralSet
 import itertools
@@ -71,3 +71,9 @@ def Knapsack():
     M.weight = Constraint(expr=sum(w[i]*M.x[i] for i in M.ITEMS) <= limit)
 
     return M
+
+
+if __name__ == '__main__':
+    m = Knapsack()
+    solver = SolverFactory('romodel.cuts')
+    solver.solve(m)
