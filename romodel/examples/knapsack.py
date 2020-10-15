@@ -17,6 +17,7 @@ from pyomo.environ import Objective, maximize, ConstraintList, SolverFactory
 from romodel import UncSet, UncParam
 from romodel.uncset import EllipsoidalSet, PolyhedralSet
 import itertools
+import numpy as np
 
 
 def Knapsack():
@@ -36,10 +37,14 @@ def Knapsack():
          [0.01, 0.1, 0.0, 0.0],
          [0.0, 0.0, 0.1, 0.0],
          [0.0, 0.0, 0.0, 0.1]]
+    Sig = np.linalg.inv(A)
     tools = ['hammer', 'wrench', 'screwdriver', 'towel']
     Adict = {(ti, tj): A[i][j]
              for i, ti in enumerate(tools)
              for j, tj in enumerate(tools)}
+    Sigdict = {(ti, tj): Sig[i][j]
+               for i, ti in enumerate(tools)
+               for j, tj in enumerate(tools)}
     perm = itertools.product([1, -1], repeat=len(tools))
     P = [dict(zip(tools, i)) for i in perm]
     rhs = [sum(p[t]*w[t] for t in tools) + 5.5 for p in P]
@@ -56,7 +61,9 @@ def Knapsack():
             lhs += (w[i] - mu[i])*Adict[i, j]*(w[j] - mu[j])
     M.E.cons = Constraint(expr=lhs <= 1)
     # library
-    M.Elib = EllipsoidalSet(mu, Adict)
+    # An ellipsoidal constraint has the form (w - mu)^T Sig^-1 (w - mu)
+    # EllipsoidalSet takes mu and Sig as arguments (inverse of A above)
+    M.Elib = EllipsoidalSet(mu, Sigdict)
 
     # Polyhedral set
     # direct
