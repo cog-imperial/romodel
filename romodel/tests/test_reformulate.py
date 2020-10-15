@@ -124,7 +124,7 @@ class TestReformulation(unittest.TestCase):
         solver = pe.SolverFactory('gurobi')
         solver.options['NonConvex'] = 2
         solver.solve(m)
-        self.assertEqual(m.value(), 25.)
+        self.assertEqual(m.value(), 19.)
 
     @unittest.skipIf('gurobi' not in solvers,
                      'gurobi not available')
@@ -136,7 +136,7 @@ class TestReformulation(unittest.TestCase):
         solver = pe.SolverFactory('gurobi')
         solver.options['NonConvex'] = 2
         solver.solve(m)
-        self.assertEqual(m.value(), 25.)
+        self.assertEqual(m.value(), 19.)
 
     def test_ellipsoidal_cons_lb(self):
         m = pe.ConcreteModel()

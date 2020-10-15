@@ -51,7 +51,6 @@ class UncSet(SimpleBlock):
 
         self._lib = False
 
-
     def is_ellipsoidal(self):
         # TODO: assumes there is only one constraint on UncSet
         for c in self.component_data_objects(Constraint, active=True):
@@ -63,17 +62,20 @@ class UncSet(SimpleBlock):
             # Collect covariance matrix and mean
             quadratic_coefs = {(id(x[0]), id(x[1])): c for x, c in
                                zip(repn.quadratic_vars, repn.quadratic_coefs)}
-            cov = [[quadratic_coefs.get((id(param[i]), id(param[j])), 0)
-                    for i in param] for j in param]
-            cov = np.array(cov)
-            cov = 1/2*(cov + cov.T)
-            eig, _ = np.linalg.eig(cov)
-            invcov = np.linalg.inv(cov)
-            mean = -1/2*np.matmul(invcov, np.array(repn.linear_coefs))
+            invcov = [[quadratic_coefs.get((id(param[i]), id(param[j])), 0)
+                       for i in param] for j in param]
+            invcov = np.array(invcov)
+            invcov = 1/2*(invcov + invcov.T)
+            eig, _ = np.linalg.eig(invcov)
+            cov = np.linalg.inv(invcov)
+            mean = -1/2*np.matmul(cov, np.array(repn.linear_coefs))
             self.mean = {x: mean[i] for i, x in enumerate(param)}
             self.cov = {(x, y): cov[i, j] for i, x
                         in enumerate(param) for j, y
                         in enumerate(param)}
+            self.invcov = {(x, y): invcov[i, j] for i, x
+                           in enumerate(param) for j, y
+                           in enumerate(param)}
             # TODO: need to check repn.constant == mean^T * cov * mean?
 
             return ((c.has_ub() and np.all(eig > 0))
