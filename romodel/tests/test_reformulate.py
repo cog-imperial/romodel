@@ -1,5 +1,6 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
+import numpy as np
 import romodel.examples
 import romodel as ro
 from romodel.reformulate import (EllipsoidalTransformation,
@@ -343,6 +344,30 @@ class TestReformulation(unittest.TestCase):
         self.assertEqual(len(repn.quadratic_vars), 1)
         self.assertIsNone(repn.nonlinear_expr)
         self.assertEqual(repn.quadratic_coefs[0], 3.**2)
+
+    def test_create_linear_dual_from_matrix_repn(self):
+        c = [0.5, 0.7]
+        b = 0.1
+        P = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]])
+        d = [1.2, 1.3, 0.9, 0.8]
+        t = PolyhedralTransformation()
+        blk = t.create_linear_dual_from_matrix_repn(c, b, P, d)
+        # Right number of dual vars
+        self.assertEqual(len(blk.var), 4)
+        # Dual objective
+        repn = generate_standard_repn(blk.obj.body)
+        self.assertEqual(repn.linear_coefs, (1.2, 1.3, 0.9, 0.8))
+        # Right number of constraints
+        self.assertEqual(len(blk.cons), 2)
+        # Dual cons 1:
+        repn = generate_standard_repn(blk.cons[1].body)
+        self.assertEqual(repn.linear_coefs, (1, -1))
+        self.assertEqual(repn.linear_vars, (blk.var[0], blk.var[2]))
+
+        # Dual cons 2:
+        repn = generate_standard_repn(blk.cons[2].body)
+        self.assertEqual(repn.linear_coefs, (1, -1))
+        self.assertEqual(repn.linear_vars, (blk.var[1], blk.var[3]))
 
 
 if __name__ == "__main__":

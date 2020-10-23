@@ -26,11 +26,6 @@ block.
 
 __all__ = ("create_linear_dual_from",)
 
-#pylint: disable-msg=invalid-name
-#pylint: disable-msg=too-many-locals
-#pylint: disable-msg=too-many-branches
-#pylint: disable-msg=too-many-statements
-
 from pyutilib.misc import Bunch
 from pyomo.repn import generate_standard_repn
 from pyomo.core import (Var,
@@ -43,6 +38,8 @@ from pyomo.core import (Var,
                         Reals,
                         Block,
                         Model,
+                        ConstraintList,
+                        quicksum,
                         ConcreteModel)
 from pyomo.core.expr.visitor import identify_variables
 
@@ -489,3 +486,18 @@ def create_linear_dual_from(block, fixed=None, unfixed=None):
                 v.domain = Reals
 
     return dual
+
+
+def create_linear_dual_from_matrix_repn(c, b, P, d):
+    blk = Block()
+    n, m = P.shape
+    # Add dual variables
+    blk.var = Var(range(n), within=NonNegativeReals)
+    # Dual objective
+    blk.obj = Constraint(expr=quicksum(d[j]*b.var[j] for j in range(n)) <= b)
+    # Dual constraints
+    blk.cons = ConstraintList()
+    for i in range(m):
+        blk.cons.add(quicksum(P[i, j]*b.var[j] for j in range(n)) == c[i])
+
+    return blk

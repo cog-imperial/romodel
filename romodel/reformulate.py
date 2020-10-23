@@ -1,10 +1,14 @@
+import numpy as np
 from pyomo.environ import (Constraint,
                            Var,
                            quicksum,
                            sqrt,
                            Objective,
                            maximize,
-                           minimize)
+                           minimize,
+                           ConstraintList,
+                           NonNegativeReals,
+                           Block)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
@@ -156,7 +160,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
 @TransformationFactory.register('romodel.polyhedral',
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
-    def _apply_to(self, instance):
+    def _apply_to(self, instance, pao=False):
         for c in chain(self.get_uncertain_components(instance),
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
@@ -187,13 +191,25 @@ class PolyhedralTransformation(BaseRobustTransformation):
             if c.ctype is Constraint:
                 # LEQ
                 if c.upper:
-                    uncset.obj = Objective(expr=c.body, sense=maximize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=o_expr <= c.upper)
-                    del uncset.obj
+                    if pao:
+                        uncset.obj = Objective(expr=c.body, sense=maximize)
+                        dual = create_linear_dual_from(uncset,
+                                                       unfixed=param.values())
+                        o_expr = dual.o.expr
+                        del dual.o
+                        dual.o = Constraint(expr=o_expr <= c.upper)
+                        del uncset.obj
+                    else:
+                        P = np.array([[row[i] for i in param]
+                                      for row in uncset.mat])
+                        d = uncset.rhs
+                        id_coef_dict = {id(repn.linear_vars[i]):
+                                        repn.linear_coefs[i]
+                                        for i in range(len(repn.linear_vars))}
+                        cc = [id_coef_dict[id(i)] for i in param.values()]
+                        b = c.upper
+                        dual = self.create_linear_dual_from_matrix_repn(cc, b,
+                                                                        P, d)
                     setattr(instance, c.name + '_counterpart_upper', dual)
                 # GEQ
                 if c.lower:
@@ -223,6 +239,24 @@ class PolyhedralTransformation(BaseRobustTransformation):
                         Objective(expr=epigraph, sense=sense))
             # Deactivate original constraint
             c.deactivate()
+
+    def create_linear_dual_from_matrix_repn(self, c, b, P, d):
+        blk = Block()
+        blk.construct()
+        n, m = P.shape
+        # Add dual variables
+        blk.var = Var(range(n), within=NonNegativeReals)
+        # Dual objective
+        blk.obj = Constraint(expr=quicksum(d[j]*blk.var[j]
+                                           for j in range(n)) <= b)
+        # Dual constraints
+        blk.cons = ConstraintList()
+        for i in range(m):
+            blk.cons.add(quicksum(P[j, i]*blk.var[j]
+                                  for j in range(n))
+                         == c[i])
+
+        return blk
 
 
 @TransformationFactory.register('romodel.generators',
