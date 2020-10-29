@@ -103,10 +103,10 @@ class UncSet(SimpleBlock):
             coef_dict = {id(x): y for x, y in zip(repn.linear_vars,
                                                   repn.linear_coefs)}
             if c.has_ub():
-                mat.append({i: coef_dict.get(id(param[i]), 0) for i in param})
+                mat.append([coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(c.upper - repn.constant)
             elif c.has_lb():
-                mat.append({i: -coef_dict.get(id(param[i]), 0) for i in param})
+                mat.append([-coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(repn.constant - c.lower)
         self.mat = mat
         self.rhs = rhs

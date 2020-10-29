@@ -1,6 +1,5 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
-import numpy as np
 import romodel.examples
 import romodel as ro
 from romodel.reformulate import (EllipsoidalTransformation,
@@ -345,13 +344,13 @@ class TestReformulation(unittest.TestCase):
         self.assertIsNone(repn.nonlinear_expr)
         self.assertEqual(repn.quadratic_coefs[0], 3.**2)
 
-    def test_create_linear_dual_from_matrix_repn(self):
+    def test_create_linear_dual(self):
         c = [0.5, 0.7]
         b = 0.1
-        P = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]])
+        P = [[1, 0], [0, 1], [-1, 0], [0, -1]]
         d = [1.2, 1.3, 0.9, 0.8]
         t = PolyhedralTransformation()
-        blk = t.create_linear_dual_from_matrix_repn(c, b, P, d)
+        blk = t.create_linear_dual(c, b, P, d)
         # Right number of dual vars
         self.assertEqual(len(blk.var), 4)
         # Dual objective

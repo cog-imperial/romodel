@@ -1,4 +1,3 @@
-import numpy as np
 from pyomo.environ import (Constraint,
                            Var,
                            quicksum,
@@ -186,11 +185,18 @@ class PolyhedralTransformation(BaseRobustTransformation):
             block = c.parent_block()
             setattr(block, c.name + '_dual', Var())
 
+            # Get coefficients
+            id_coef_dict = {id(repn.linear_vars[i]):
+                            repn.linear_coefs[i]
+                            for i in range(len(repn.linear_vars))}
+            c_coefs = [id_coef_dict.get(id(i), 0) for i in param.values()]
+
             # Add dual constraints d^T * v <= b, P^T * v = x
             # Constraint
             if c.ctype is Constraint:
                 # LEQ
                 if c.upper:
+                    # Create linear dual
                     if pao:
                         uncset.obj = Objective(expr=c.body, sense=maximize)
                         dual = create_linear_dual_from(uncset,
@@ -200,39 +206,48 @@ class PolyhedralTransformation(BaseRobustTransformation):
                         dual.o = Constraint(expr=o_expr <= c.upper)
                         del uncset.obj
                     else:
-                        P = np.array([[row[i] for i in param]
-                                      for row in uncset.mat])
-                        d = uncset.rhs
-                        id_coef_dict = {id(repn.linear_vars[i]):
-                                        repn.linear_coefs[i]
-                                        for i in range(len(repn.linear_vars))}
-                        cc = [id_coef_dict[id(i)] for i in param.values()]
-                        b = c.upper
-                        dual = self.create_linear_dual_from_matrix_repn(cc, b,
-                                                                        P, d)
+                        dual = self.create_linear_dual(c_coefs,
+                                                       c.upper,
+                                                       uncset.mat,
+                                                       uncset.rhs)
                     setattr(instance, c.name + '_counterpart_upper', dual)
                 # GEQ
                 if c.lower:
-                    uncset.obj = Objective(expr=c.body, sense=minimize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=c.lower <= o_expr)
-                    del uncset.obj
+                    # Create linear dual
+                    if pao:
+                        uncset.obj = Objective(expr=c.body, sense=minimize)
+                        dual = create_linear_dual_from(uncset,
+                                                       unfixed=param.values())
+                        o_expr = dual.o.expr
+                        del dual.o
+                        dual.o = Constraint(expr=c.lower <= o_expr)
+                        del uncset.obj
+                    else:
+                        dual = self.create_linear_dual(-1*c_coefs,
+                                                       -1*c.lower,
+                                                       uncset.mat,
+                                                       uncset.rhs)
                     setattr(instance, c.name + '_counterpart_lower', dual)
             # Objective
             else:
                 setattr(instance, c.name + '_epigraph', Var())
                 epigraph = getattr(instance, c.name + '_epigraph')
                 sense = c.sense
-                uncset.obj = Objective(expr=c.expr, sense=-sense)
-                dual = create_linear_dual_from(uncset,
-                                               unfixed=param.values())
-                o_expr = dual.o.expr
-                del dual.o
-                dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
-                del uncset.obj
+                # Create linear dual
+                if pao:
+                    uncset.obj = Objective(expr=c.expr, sense=-sense)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
+                    del uncset.obj
+                else:
+                    dual = self.create_linear_dual(sense*c_coefs,
+                                                   sense*epigraph,
+                                                   uncset.mat,
+                                                   uncset.rhs)
+
                 setattr(instance, c.name + '_counterpart', dual)
                 setattr(instance,
                         c.name + '_new',
@@ -240,10 +255,14 @@ class PolyhedralTransformation(BaseRobustTransformation):
             # Deactivate original constraint
             c.deactivate()
 
-    def create_linear_dual_from_matrix_repn(self, c, b, P, d):
+    def create_linear_dual(self, c, b, P, d):
+        '''
+        Robust constraint:
+            c^T*w <= b for all P*w <= d
+        '''
         blk = Block()
         blk.construct()
-        n, m = P.shape
+        n, m = len(P), len(P[0])
         # Add dual variables
         blk.var = Var(range(n), within=NonNegativeReals)
         # Dual objective
@@ -252,7 +271,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
         # Dual constraints
         blk.cons = ConstraintList()
         for i in range(m):
-            blk.cons.add(quicksum(P[j, i]*blk.var[j]
+            blk.cons.add(quicksum(P[j][i]*blk.var[j]
                                   for j in range(n))
                          == c[i])
 
