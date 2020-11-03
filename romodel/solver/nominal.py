@@ -32,6 +32,7 @@ class NominalSolver(pyomo.opt.OptSolver):
 
         with pyomo.opt.SolverFactory(solver) as opt:
             self.results = []
+            opt.options = self.options
             results = opt.solve(instance,
                                 tee=self._tee,
                                 timelimit=self._timelimit)
