@@ -49,6 +49,12 @@ def Pooling():
         expr += (m.price_product[j] - price_product[j])**2
     m.U.c = pe.Constraint(expr=expr <= 0.1)
 
+    m.Elib = ro.uncset.EllipsoidalSet(price_product,
+                                      [[0.1, 0, 0, 0],
+                                       [0, 0.1, 0, 0],
+                                       [0, 0, 0.1, 0],
+                                       [0, 0, 0, 0.1]])
+
     m.P = ro.UncSet()
     m.P.cons = pe.ConstraintList()
     for j in products:
@@ -56,6 +62,26 @@ def Pooling():
         m.P.cons.add(m.price_product[j] - price_product[j] >= -0.01)
     m.P.cons.add((m.price_product[0] - price_product[0])
                  + (m.price_product[1] - price_product[1]) <= 0.01)
+
+    m.Plib = ro.uncset.PolyhedralSet([[1, 0, 0, 0],
+                                      [-1, 0, 0, 0],
+                                      [0, 1, 0, 0],
+                                      [0, -1, 0, 0],
+                                      [0, 0, 1, 0],
+                                      [0, 0, -1, 0],
+                                      [0, 0, 0, 1],
+                                      [0, 0, 0, -1],
+                                      [1, 1, 0, 0]],
+                                     [0.01 + price_product[0],
+                                      0.01 - price_product[0],
+                                      0.01 + price_product[1],
+                                      0.01 - price_product[1],
+                                      0.01 + price_product[2],
+                                      0.01 - price_product[2],
+                                      0.01 + price_product[3],
+                                      0.01 - price_product[3],
+                                      0.01 + price_product[0]
+                                      + price_product[1]])
 
     m.C = ro.UncSet()
     m.C.cons = pe.ConstraintList()
