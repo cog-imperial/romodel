@@ -18,6 +18,18 @@ class TestE2E(unittest.TestCase):
         solver = pe.SolverFactory('romodel.cuts')
         solver.solve(m, tee=False)
 
+    def test_knapsack_cuts_poly_lib(self):
+        m = romodel.examples.Knapsack()
+        m.w.uncset = m.Plib
+        solver = pe.SolverFactory('romodel.cuts')
+        solver.solve(m, tee=False)
+
+    def test_knapsack_cuts_ellipsoidal_lib(self):
+        m = romodel.examples.Knapsack()
+        m.w.uncset = m.Elib
+        solver = pe.SolverFactory('romodel.cuts')
+        solver.solve(m, tee=False)
+
     def test_portfolio_reformulation(self):
         m = romodel.examples.Portfolio()
         solver = pe.SolverFactory('romodel.reformulation')
