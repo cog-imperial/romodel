@@ -21,6 +21,7 @@ import numpy as np
 
 
 def Knapsack():
+    tools = ['hammer', 'wrench', 'screwdriver', 'towel']
     v = {'hammer': 8, 'wrench': 3, 'screwdriver': 6, 'towel': 11}
     w = {'hammer': 5, 'wrench': 7, 'screwdriver': 4, 'towel': 3}
 
@@ -32,22 +33,15 @@ def Knapsack():
     M.x = Var(M.ITEMS, within=Binary)
 
     # Define Uncertainty set & uncertain parameters
-    mu = w
+    mu = [w[t] for t in tools]
     A = [[0.1, 0.01, 0.0, 0.0],
          [0.01, 0.1, 0.0, 0.0],
          [0.0, 0.0, 0.1, 0.0],
          [0.0, 0.0, 0.0, 0.1]]
-    Sig = np.linalg.inv(A)
-    tools = ['hammer', 'wrench', 'screwdriver', 'towel']
-    Adict = {(ti, tj): A[i][j]
-             for i, ti in enumerate(tools)
-             for j, tj in enumerate(tools)}
-    Sigdict = {(ti, tj): Sig[i][j]
-               for i, ti in enumerate(tools)
-               for j, tj in enumerate(tools)}
+    Sig = np.linalg.inv(A).tolist()
     perm = itertools.product([1, -1], repeat=len(tools))
-    P = [dict(zip(tools, i)) for i in perm]
-    rhs = [sum(p[t]*w[t] for t in tools) + 5.5 for p in P]
+    P = [i for i in perm]
+    rhs = [sum(p[i]*w[t] for i, t in enumerate(tools)) + 5.5 for p in P]
 
     M.E = UncSet()
     M.w = UncParam(M.ITEMS, uncset=M.E, nominal=w)
@@ -56,21 +50,21 @@ def Knapsack():
     # Ellipsoidal set
     # direct
     lhs = 0
-    for i in M.ITEMS:
-        for j in M.ITEMS:
-            lhs += (w[i] - mu[i])*Adict[i, j]*(w[j] - mu[j])
+    for i, ti in enumerate(tools):
+        for j, tj in enumerate(tools):
+            lhs += (w[ti] - mu[i])*A[i][j]*(w[tj] - mu[j])
     M.E.cons = Constraint(expr=lhs <= 1)
     # library
     # An ellipsoidal constraint has the form (w - mu)^T Sig^-1 (w - mu)
     # EllipsoidalSet takes mu and Sig as arguments (inverse of A above)
-    M.Elib = EllipsoidalSet(mu, Sigdict)
+    M.Elib = EllipsoidalSet(mu, Sig)
 
     # Polyhedral set
     # direct
     M.P = UncSet()
     M.P.cons = ConstraintList()
     for i, p in enumerate(P):
-        M.P.cons.add(sum(M.w[t]*p[t] for t in tools) <= rhs[i])
+        M.P.cons.add(sum(M.w[t]*p[i] for i, t in enumerate(tools)) <= rhs[i])
     # library
     M.Plib = PolyhedralSet(P, rhs)
 
