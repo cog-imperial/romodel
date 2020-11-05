@@ -190,12 +190,13 @@ class PolyhedralTransformation(BaseRobustTransformation):
                             repn.linear_coefs[i]
                             for i in range(len(repn.linear_vars))}
             c_coefs = [id_coef_dict.get(id(i), 0) for i in param.values()]
+            cons = repn.constant
 
             # Add dual constraints d^T * v <= b, P^T * v = x
             # Constraint
             if c.ctype is Constraint:
                 # LEQ
-                if c.upper:
+                if c.has_ub():
                     # Create linear dual
                     if pao:
                         uncset.obj = Objective(expr=c.body, sense=maximize)
@@ -207,12 +208,12 @@ class PolyhedralTransformation(BaseRobustTransformation):
                         del uncset.obj
                     else:
                         dual = self.create_linear_dual(c_coefs,
-                                                       c.upper,
+                                                       c.upper - cons,
                                                        uncset.mat,
                                                        uncset.rhs)
                     setattr(instance, c.name + '_counterpart_upper', dual)
                 # GEQ
-                if c.lower:
+                if c.has_lb():
                     # Create linear dual
                     if pao:
                         uncset.obj = Objective(expr=c.body, sense=minimize)
@@ -224,7 +225,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                         del uncset.obj
                     else:
                         dual = self.create_linear_dual(-1*c_coefs,
-                                                       -1*c.lower,
+                                                       -1*(c.lower - cons),
                                                        uncset.mat,
                                                        uncset.rhs)
                     setattr(instance, c.name + '_counterpart_lower', dual)
@@ -244,7 +245,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     del uncset.obj
                 else:
                     dual = self.create_linear_dual(sense*c_coefs,
-                                                   sense*epigraph,
+                                                   sense*(epigraph + cons),
                                                    uncset.mat,
                                                    uncset.rhs)
 
