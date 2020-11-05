@@ -82,10 +82,14 @@ class RobustConstraintData(_BlockData):
         uncset = self._uncset[0]
         m.cons = ConstraintList()
         substitution_map = {id(uncparam[i]): m.uncparam[i] for i in index}
-        for c in uncset.component_data_objects(Constraint):
-            m.cons.add((c.lower,
-                        replace_expressions(c.body, substitution_map),
-                        c.upper))
+        if not uncset.is_lib():
+            for c in uncset.component_data_objects(Constraint):
+                m.cons.add((c.lower,
+                            replace_expressions(c.body, substitution_map),
+                            c.upper))
+        else:
+            for cons in uncset.generate_cons_from_lib(m.uncparam):
+                m.cons.add(cons)
         return m
         # What should we do with the constraints? Replace UncParams by the
         # Vars? Or restructure UncParam so that we can solve directly.k

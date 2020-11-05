@@ -1,5 +1,5 @@
 from pyomo.core import SimpleBlock, ModelComponentFactory, Component
-from pyomo.core import Constraint
+from pyomo.core import Constraint, quicksum
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import identify_parent_components
 from romodel.uncparam import UncParam
@@ -115,6 +115,9 @@ class UncSet(SimpleBlock):
             return False
         return True
 
+    def is_lib(self):
+        return self._lib
+
     def get_uncertain_param(self):
         param = None
         for p in self.component_objects(UncParam, active=True):
@@ -137,6 +140,17 @@ class EllipsoidalSet(UncSet):
         super().__init__(*args, **kwargs)
         self._lib = True
 
+    def generate_cons_from_lib(self, param):
+        assert len(param) == len(self.mean)
+        expr = 0
+        invcov = np.linalg.inv(self.cov)
+        for i, ind_i in enumerate(param):
+            for j, ind_j in enumerate(param):
+                expr += ((param[ind_i] - self.mean[i])
+                         * invcov[i, j]
+                         * (param[ind_j] - self.mean[j]))
+        yield None, expr, self.rhs
+
     def is_ellipsoidal(self):
         return True
 
@@ -154,6 +168,13 @@ class PolyhedralSet(UncSet):
         self.rhs = rhs
         super().__init__(*args, **kwargs)
         self._lib = True
+
+    def generate_cons_from_lib(self, param):
+        for i, row in enumerate(self.mat):
+            yield (None,
+                   quicksum(row[j]*param[ind]
+                            for j, ind in enumerate(param)),
+                   self.rhs[i])
 
     def is_polyhedral(self):
         return True
