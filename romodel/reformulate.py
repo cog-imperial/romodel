@@ -223,7 +223,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                         dual.o = Constraint(expr=c.lower <= o_expr)
                         del uncset.obj
                     else:
-                        dual = self.create_linear_dual(-1*c_coefs,
+                        dual = self.create_linear_dual([-1*c for c in c_coefs],
                                                        -1*c.lower,
                                                        uncset.mat,
                                                        uncset.rhs)
@@ -243,7 +243,7 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
                     del uncset.obj
                 else:
-                    dual = self.create_linear_dual(sense*c_coefs,
+                    dual = self.create_linear_dual([sense*c for c in c_coefs],
                                                    sense*epigraph,
                                                    uncset.mat,
                                                    uncset.rhs)
