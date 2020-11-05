@@ -34,6 +34,11 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         else:
             solver = self.options.solver
 
+        if not self.options.max_iter:
+            max_iter = 300
+        else:
+            max_iter = self.options.max_iter
+
         print("Using solver {}\n".format(solver))
 
         with pyomo.opt.SolverFactory(solver) as opt:
@@ -53,7 +58,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                   "Add cuts and resolve.".format(feas, total))
             # Keep adding cuts until feasible
             n_iter = 1
-            while not all(feasible.values()):
+            while (not all(feasible.values())) and (n_iter < max_iter):
                 results = opt.solve(instance,
                                     tee=self._tee,
                                     timelimit=self._timelimit)
@@ -68,8 +73,12 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                 print("{0}/{1} constraints robustly feasible. "
                       "Add cuts and resolve.".format(feas, total))
 
-            print("\nAll constraints robustly feasible after {} "
-                  "iterations.".format(n_iter))
+            if all(feasible.values()):
+                print("\nAll constraints robustly feasible after {} "
+                      "iterations.".format(n_iter))
+            else:
+                print("\nEnding after reaching max_iter={} iterations. "
+                      "Solution is not robustly feasible".format(max_iter))
 
         stop_time = time.time()
         self.wall_time = stop_time - start_time
