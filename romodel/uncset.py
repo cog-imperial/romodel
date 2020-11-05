@@ -70,12 +70,8 @@ class UncSet(SimpleBlock):
             cov = np.linalg.inv(invcov)
             mean = -1/2*np.matmul(cov, np.array(repn.linear_coefs))
             self.mean = {x: mean[i] for i, x in enumerate(param)}
-            self.cov = {(x, y): cov[i, j] for i, x
-                        in enumerate(param) for j, y
-                        in enumerate(param)}
-            self.invcov = {(x, y): invcov[i, j] for i, x
-                           in enumerate(param) for j, y
-                           in enumerate(param)}
+            self.cov = cov.tolist()
+            self.invcov = invcov
             # TODO: need to check repn.constant == mean^T * cov * mean?
 
             return ((c.has_ub() and np.all(eig > 0))
