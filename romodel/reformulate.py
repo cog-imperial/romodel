@@ -98,11 +98,11 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                               for param, var
                               in zip(repn.linear_vars, repn.linear_coefs)}
             # padding = sqrt( var^T * cov^-1 * var )
-            padding = quicksum(param_var_dict[id(x)]
-                               * uncset.cov[i, j]
-                               * param_var_dict[id(y)]
-                               for i, x in param.iteritems()
-                               for j, y in param.iteritems())
+            padding = quicksum(param_var_dict[id(param[ind_i])]
+                               * uncset.cov[i][j]
+                               * param_var_dict[id(param[ind_j])]
+                               for i, ind_i in enumerate(param)
+                               for j, ind_j in enumerate(param))
             if c.ctype is Constraint:
                 # For upper bound: det + padding <= b
                 if c.has_ub():
@@ -148,7 +148,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                             Var(bounds=(0, float('inf'))))
                     pvar = getattr(instance, c.name + '_padding')
                     counterpart = Objective(expr=det + sense*pvar, sense=sense)
-                    deterministic = Constraint(expr=padding <= pvar)
+                    deterministic = Constraint(expr=padding <= pvar**2)
                     setattr(instance,
                             c.name + '_det',
                             deterministic)
@@ -180,10 +180,6 @@ class PolyhedralTransformation(BaseRobustTransformation):
             assert repn.is_linear(), (
                     "Constraint {} should be linear in "
                     "unc. parameters".format(c.name))
-
-            # Create dual variables
-            block = c.parent_block()
-            setattr(block, c.name + '_dual', Var())
 
             # Get coefficients
             id_coef_dict = {id(repn.linear_vars[i]):
