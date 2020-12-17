@@ -45,6 +45,7 @@ class TestE2E(unittest.TestCase):
         m = romodel.examples.Pooling()
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['NonConvex'] = 2
+        solver.options['TimeLimit'] = 60
         solver.solve(m, tee=False)
 
     def test_pooling_reformulation_polyhedral(self):
