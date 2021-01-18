@@ -2,6 +2,7 @@ from pyomo.core.expr.visitor import ExpressionValueVisitor
 from pyomo.core.expr.visitor import SimpleExpressionVisitor
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_types
 from romodel.uncparam import UncParam
+from romodel.components import AdjustableVar
 
 
 class _IsUncertainVisitor(ExpressionValueVisitor):
@@ -75,3 +76,33 @@ def identify_parent_components(expr, component_types):
     visitor = _ParentComponentVisitor(component_types)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
+
+
+class _IsAdjustableVisitor(ExpressionValueVisitor):
+    def visit(self, node, values):
+        return any(values)
+
+    def visiting_potential_leaf(self, node):
+        import ipdb; ipdb.set_trace()
+        if (node.__class__ in nonpyomo_leaf_types
+                or not node.is_potentially_variable()):
+            return True, False
+
+        elif not node.is_expression_type():
+            return True, node.ctype is AdjustableVar
+
+        return False, None
+
+
+def _expression_is_adjustable(node):
+    """
+    Return True if expression contains UncParam component.
+
+    Args:
+        node: The root node of an expression tree.
+    Returns:
+        True if expression contains at least one leaf of type UncParam, False
+        otherwise.
+    """
+    visitor = _IsAdjustableVisitor()
+    return visitor.dfs_postorder_stack(node)
