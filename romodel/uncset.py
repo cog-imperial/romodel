@@ -1,9 +1,8 @@
 from pyomo.core import SimpleBlock, ModelComponentFactory, Component
-from pyomo.core import Constraint
+from pyomo.core import Constraint, quicksum
 from pyomo.repn import generate_standard_repn
-from pro.visitor import identify_parent_components
-from pro.uncparam import UncParam
-from collections import defaultdict
+from romodel.visitor import identify_parent_components
+from romodel.uncparam import UncParam
 import numpy as np
 
 
@@ -50,10 +49,7 @@ class UncSet(SimpleBlock):
         else:
             self._param = _param
 
-        # if isinstance(_var, Component):
-        #     self._var = [_var]
-        # else:
-        #     self._var = _var
+        self._lib = False
 
     def is_ellipsoidal(self):
         # TODO: assumes there is only one constraint on UncSet
@@ -66,17 +62,16 @@ class UncSet(SimpleBlock):
             # Collect covariance matrix and mean
             quadratic_coefs = {(id(x[0]), id(x[1])): c for x, c in
                                zip(repn.quadratic_vars, repn.quadratic_coefs)}
-            cov = [[quadratic_coefs.get((id(param[i]), id(param[j])), 0)
-                    for i in param] for j in param]
-            cov = np.array(cov)
-            cov = 1/2*(cov + cov.T)
-            eig, _ = np.linalg.eig(cov)
-            invcov = np.linalg.inv(cov)
-            mean = -1/2*np.matmul(invcov, np.array(repn.linear_coefs))
+            invcov = [[quadratic_coefs.get((id(param[i]), id(param[j])), 0)
+                       for i in param] for j in param]
+            invcov = np.array(invcov)
+            invcov = 1/2*(invcov + invcov.T)
+            eig, _ = np.linalg.eig(invcov)
+            cov = np.linalg.inv(invcov)
+            mean = -1/2*np.matmul(cov, np.array(repn.linear_coefs))
             self.mean = {x: mean[i] for i, x in enumerate(param)}
-            self.cov = {(x, y): cov[i, j] for i, x
-                        in enumerate(param) for j, y
-                        in enumerate(param)}
+            self.cov = cov.tolist()
+            self.invcov = invcov
             # TODO: need to check repn.constant == mean^T * cov * mean?
 
             return ((c.has_ub() and np.all(eig > 0))
@@ -104,14 +99,24 @@ class UncSet(SimpleBlock):
             coef_dict = {id(x): y for x, y in zip(repn.linear_vars,
                                                   repn.linear_coefs)}
             if c.has_ub():
-                mat.append({i: coef_dict.get(id(param[i]), 0) for i in param})
+                mat.append([coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(c.upper - repn.constant)
             elif c.has_lb():
-                mat.append({i: -coef_dict.get(id(param[i]), 0) for i in param})
+                mat.append([-coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(repn.constant - c.lower)
         self.mat = mat
         self.rhs = rhs
         return True
+
+    def is_empty(self):
+        if self._lib:
+            return False
+        for c in self.component_data_objects(Constraint, active=True):
+            return False
+        return True
+
+    def is_lib(self):
+        return self._lib
 
     def get_uncertain_param(self):
         param = None
@@ -133,6 +138,18 @@ class EllipsoidalSet(UncSet):
         self.cov = cov
         self.rhs = rhs
         super().__init__(*args, **kwargs)
+        self._lib = True
+
+    def generate_cons_from_lib(self, param):
+        assert len(param) == len(self.mean)
+        expr = 0
+        invcov = np.linalg.inv(self.cov)
+        for i, ind_i in enumerate(param):
+            for j, ind_j in enumerate(param):
+                expr += ((param[ind_i] - self.mean[i])
+                         * invcov[i, j]
+                         * (param[ind_j] - self.mean[j]))
+        yield None, expr, self.rhs
 
     def is_ellipsoidal(self):
         return True
@@ -150,6 +167,14 @@ class PolyhedralSet(UncSet):
         self.mat = mat
         self.rhs = rhs
         super().__init__(*args, **kwargs)
+        self._lib = True
+
+    def generate_cons_from_lib(self, param):
+        for i, row in enumerate(self.mat):
+            yield (None,
+                   quicksum(row[j]*param[ind]
+                            for j, ind in enumerate(param)),
+                   self.rhs[i])
 
     def is_polyhedral(self):
         return True

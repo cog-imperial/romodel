@@ -4,14 +4,17 @@ from pyomo.environ import (Constraint,
                            sqrt,
                            Objective,
                            maximize,
-                           minimize)
+                           minimize,
+                           ConstraintList,
+                           NonNegativeReals,
+                           Block)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
-from pro.visitor import _expression_is_uncertain
-from pro.generator import RobustConstraint
-from pao.duality import create_linear_dual_from
+from romodel.visitor import _expression_is_uncertain
+from romodel.generator import RobustConstraint
+from romodel.duality import create_linear_dual_from
 from itertools import chain
-from pro.util import collect_uncparam
+from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
 
 
@@ -58,7 +61,7 @@ class BaseRobustTransformation(Transformation):
         return repn
 
 
-@TransformationFactory.register('pro.robust.ellipsoidal',
+@TransformationFactory.register('romodel.ellipsoidal',
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance, root=False):
@@ -72,6 +75,9 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                                         "uncertain parameter {}."
                                         .format(param.name))
 
+            # Check if uncertainty set is empty
+            assert not uncset.is_empty(), ("{} does not have any "
+                                           "constraints.".format(uncset.name))
             # Check if uncertainty set is ellipsoidal
             if not uncset.is_ellipsoidal():
                 continue
@@ -92,11 +98,11 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                               for param, var
                               in zip(repn.linear_vars, repn.linear_coefs)}
             # padding = sqrt( var^T * cov^-1 * var )
-            padding = quicksum(param_var_dict[id(x)]
-                               * uncset.cov[i, j]
-                               * param_var_dict[id(y)]
-                               for i, x in param.iteritems()
-                               for j, y in param.iteritems())
+            padding = quicksum(param_var_dict[id(param[ind_i])]
+                               * uncset.cov[i][j]
+                               * param_var_dict[id(param[ind_j])]
+                               for i, ind_i in enumerate(param)
+                               for j, ind_j in enumerate(param))
             if c.ctype is Constraint:
                 # For upper bound: det + padding <= b
                 if c.has_ub():
@@ -142,7 +148,7 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                             Var(bounds=(0, float('inf'))))
                     pvar = getattr(instance, c.name + '_padding')
                     counterpart = Objective(expr=det + sense*pvar, sense=sense)
-                    deterministic = Constraint(expr=padding <= pvar)
+                    deterministic = Constraint(expr=padding <= pvar**2)
                     setattr(instance,
                             c.name + '_det',
                             deterministic)
@@ -150,16 +156,20 @@ class EllipsoidalTransformation(BaseRobustTransformation):
             c.deactivate()
 
 
-@TransformationFactory.register('pro.robust.polyhedral',
+@TransformationFactory.register('romodel.polyhedral',
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
-    def _apply_to(self, instance):
+    def _apply_to(self, instance, pao=False):
         for c in chain(self.get_uncertain_components(instance),
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
             # Collect UncParam and UncSet
             param = collect_uncparam(c)
             uncset = param.uncset
+            # Check if uncertainty set is empty
+            assert not uncset.is_empty(), ("{} does not have any "
+                                           "constraints.".format(uncset.name))
+            # Check if uncertainty set is polyhedral
             if not uncset.is_polyhedral():
                 continue
 
@@ -171,45 +181,70 @@ class PolyhedralTransformation(BaseRobustTransformation):
                     "Constraint {} should be linear in "
                     "unc. parameters".format(c.name))
 
-            # Create dual variables
-            block = c.parent_block()
-            setattr(block, c.name + '_dual', Var())
+            # Get coefficients
+            id_coef_dict = {id(repn.linear_vars[i]):
+                            repn.linear_coefs[i]
+                            for i in range(len(repn.linear_vars))}
+            c_coefs = [id_coef_dict.get(id(i), 0) for i in param.values()]
+            cons = repn.constant
 
             # Add dual constraints d^T * v <= b, P^T * v = x
             # Constraint
             if c.ctype is Constraint:
                 # LEQ
-                if c.upper:
-                    uncset.obj = Objective(expr=c.body, sense=maximize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=o_expr <= c.upper)
-                    del uncset.obj
+                if c.has_ub():
+                    # Create linear dual
+                    if pao:
+                        uncset.obj = Objective(expr=c.body, sense=maximize)
+                        dual = create_linear_dual_from(uncset,
+                                                       unfixed=param.values())
+                        o_expr = dual.o.expr
+                        del dual.o
+                        dual.o = Constraint(expr=o_expr <= c.upper)
+                        del uncset.obj
+                    else:
+                        dual = self.create_linear_dual(c_coefs,
+                                                       c.upper - cons,
+                                                       uncset.mat,
+                                                       uncset.rhs)
                     setattr(instance, c.name + '_counterpart_upper', dual)
                 # GEQ
-                if c.lower:
-                    uncset.obj = Objective(expr=c.body, sense=minimize)
-                    dual = create_linear_dual_from(uncset,
-                                                   unfixed=param.values())
-                    o_expr = dual.o.expr
-                    del dual.o
-                    dual.o = Constraint(expr=c.lower <= o_expr)
-                    del uncset.obj
+                if c.has_lb():
+                    # Create linear dual
+                    if pao:
+                        uncset.obj = Objective(expr=c.body, sense=minimize)
+                        dual = create_linear_dual_from(uncset,
+                                                       unfixed=param.values())
+                        o_expr = dual.o.expr
+                        del dual.o
+                        dual.o = Constraint(expr=c.lower <= o_expr)
+                        del uncset.obj
+                    else:
+                        dual = self.create_linear_dual([-1*c for c in c_coefs],
+                                                       -1*(c.lower - cons),
+                                                       uncset.mat,
+                                                       uncset.rhs)
                     setattr(instance, c.name + '_counterpart_lower', dual)
             # Objective
             else:
                 setattr(instance, c.name + '_epigraph', Var())
                 epigraph = getattr(instance, c.name + '_epigraph')
                 sense = c.sense
-                uncset.obj = Objective(expr=c.expr, sense=-sense)
-                dual = create_linear_dual_from(uncset,
-                                               unfixed=param.values())
-                o_expr = dual.o.expr
-                del dual.o
-                dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
-                del uncset.obj
+                # Create linear dual
+                if pao:
+                    uncset.obj = Objective(expr=c.expr, sense=-sense)
+                    dual = create_linear_dual_from(uncset,
+                                                   unfixed=param.values())
+                    o_expr = dual.o.expr
+                    del dual.o
+                    dual.o = Constraint(expr=sense*o_expr <= sense*epigraph)
+                    del uncset.obj
+                else:
+                    dual = self.create_linear_dual([sense*c for c in c_coefs],
+                                                   sense*(epigraph - cons),
+                                                   uncset.mat,
+                                                   uncset.rhs)
+
                 setattr(instance, c.name + '_counterpart', dual)
                 setattr(instance,
                         c.name + '_new',
@@ -217,8 +252,30 @@ class PolyhedralTransformation(BaseRobustTransformation):
             # Deactivate original constraint
             c.deactivate()
 
+    def create_linear_dual(self, c, b, P, d):
+        '''
+        Robust constraint:
+            c^T*w <= b for all P*w <= d
+        '''
+        blk = Block()
+        blk.construct()
+        n, m = len(P), len(P[0])
+        # Add dual variables
+        blk.var = Var(range(n), within=NonNegativeReals)
+        # Dual objective
+        blk.obj = Constraint(expr=quicksum(d[j]*blk.var[j]
+                                           for j in range(n)) <= b)
+        # Dual constraints
+        blk.cons = ConstraintList()
+        for i in range(m):
+            blk.cons.add(quicksum(P[j][i]*blk.var[j]
+                                  for j in range(n))
+                         == c[i])
 
-@TransformationFactory.register('pro.robust.generators',
+        return blk
+
+
+@TransformationFactory.register('romodel.generators',
                                 doc=("Replace uncertain constraints by"
                                      " cutting plane generators"))
 class GeneratorTransformation(BaseRobustTransformation):
@@ -228,7 +285,7 @@ class GeneratorTransformation(BaseRobustTransformation):
         cons = self.get_uncertain_components(instance)
         objs = self.get_uncertain_components(instance, component=Objective)
 
-        tdata = instance._transformation_data['pro.robust.generators']
+        tdata = instance._transformation_data['romodel.generators']
         tdata.generators = []
 
         for c in cons:
@@ -268,7 +325,7 @@ class GeneratorTransformation(BaseRobustTransformation):
         pass
 
 
-@TransformationFactory.register('pro.nominal',
+@TransformationFactory.register('romodel.nominal',
                                 doc="Transform robust to nominal model.")
 class NominalTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
@@ -290,3 +347,17 @@ class NominalTransformation(BaseRobustTransformation):
                 smap[id(param[i])] = param[i].nominal
             expr_nominal = replace_expressions(o.expr, smap)
             o.expr = expr_nominal
+
+
+@TransformationFactory.register('romodel.unknown',
+                                doc="Check for unknown uncertainty sets.")
+class UnknownTransformation(BaseRobustTransformation):
+    def _apply_to(self, instance):
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            # Collect UncParam and UncSet
+            param = collect_uncparam(c)
+            uncset = param.uncset
+            raise RuntimeError("Cannot reformulate UncSet with unknown "
+                               "geometry: {}".format(uncset.name))

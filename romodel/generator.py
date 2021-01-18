@@ -11,8 +11,8 @@ from pyomo.environ import (ConstraintList,
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.repn import generate_standard_repn
-from pro import UncParam
-from pro.visitor import identify_parent_components
+from romodel import UncParam
+from romodel.visitor import identify_parent_components
 from collections import defaultdict
 
 
@@ -82,10 +82,14 @@ class RobustConstraintData(_BlockData):
         uncset = self._uncset[0]
         m.cons = ConstraintList()
         substitution_map = {id(uncparam[i]): m.uncparam[i] for i in index}
-        for c in uncset.component_data_objects(Constraint):
-            m.cons.add((c.lower,
-                        replace_expressions(c.body, substitution_map),
-                        c.upper))
+        if not uncset.is_lib():
+            for c in uncset.component_data_objects(Constraint):
+                m.cons.add((c.lower,
+                            replace_expressions(c.body, substitution_map),
+                            c.upper))
+        else:
+            for cons in uncset.generate_cons_from_lib(m.uncparam):
+                m.cons.add(cons)
         return m
         # What should we do with the constraints? Replace UncParams by the
         # Vars? Or restructure UncParam so that we can solve directly.k

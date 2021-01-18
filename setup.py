@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='pro',
-    version='0.1.0',
-    url='https://github.com/johwiebe/pro.git',
+    name='romodel',
+    version='0.0.1',
+    url='https://github.com/johwiebe/romodel.git',
     author='Johannes Wiebe',
     author_email='j.wiebe17@imperial.ac.uk',
     description='Pyomo robust optimization toolbox',

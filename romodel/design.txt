@@ -1,5 +1,5 @@
 from pyomo.environ import ConcreteModel, Var, ConstraintList, Objective,maximize
-from pyomo.contrib.pro import UncSet, UncParam
+from pyomo.contrib.romodel import UncSet, UncParam
 
 m = ConcreteModel()
 m.x = Var()
