@@ -96,7 +96,7 @@ class _AdjustableVarData(ComponentData, NumericValue):
 
     def is_parameter_type(self):
         """Returns True because this is an (uncertain) Parameter."""
-        return True
+        return False
 
     def is_constant(self):
         """Returns False because this is not a constant in an expression."""

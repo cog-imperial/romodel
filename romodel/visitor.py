@@ -83,7 +83,6 @@ class _IsAdjustableVisitor(ExpressionValueVisitor):
         return any(values)
 
     def visiting_potential_leaf(self, node):
-        import ipdb; ipdb.set_trace()
         if (node.__class__ in nonpyomo_leaf_types
                 or not node.is_potentially_variable()):
             return True, False
