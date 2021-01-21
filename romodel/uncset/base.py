@@ -1,20 +1,9 @@
 from pyomo.core import SimpleBlock, ModelComponentFactory, Component
-from pyomo.core import Constraint, quicksum
+from pyomo.core import Constraint
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import identify_parent_components
 from romodel.uncparam import UncParam
 import numpy as np
-
-
-class BaseSet():
-    def __init__():
-        pass
-
-    def is_ellipsoidal(self):
-        return False
-
-    def is_polyhedral(self):
-        return False
 
 
 @ModelComponentFactory.register("Uncertainty set in a robust problem")
@@ -125,80 +114,3 @@ class UncSet(SimpleBlock):
                 param = p
             else:
                 assert param is p
-
-
-class EllipsoidalSet(UncSet):
-    '''
-    Defines an ellipsoidal uncertainty set of shape:
-        (param - mu)^T * A * (param - mu) <= 1
-    '''
-    def __init__(self, mean, cov, *args, **kwargs):
-        rhs = kwargs.pop('rhs', 1)
-        self.mean = mean
-        self.cov = cov
-        self.rhs = rhs
-        super().__init__(*args, **kwargs)
-        self._lib = True
-
-    def generate_cons_from_lib(self, param):
-        assert len(param) == len(self.mean)
-        expr = 0
-        invcov = np.linalg.inv(self.cov)
-        for i, ind_i in enumerate(param):
-            for j, ind_j in enumerate(param):
-                expr += ((param[ind_i] - self.mean[i])
-                         * invcov[i, j]
-                         * (param[ind_j] - self.mean[j]))
-        yield None, expr, self.rhs
-
-    def is_ellipsoidal(self):
-        return True
-
-    def is_polyhedral(self):
-        return False
-
-
-class PolyhedralSet(UncSet):
-    '''
-    Defines a polyhedral uncertainty set of shape:
-        P * param <= b
-    '''
-    def __init__(self, mat, rhs, *args, **kwargs):
-        self.mat = mat
-        self.rhs = rhs
-        super().__init__(*args, **kwargs)
-        self._lib = True
-
-    def generate_cons_from_lib(self, param):
-        for i, row in enumerate(self.mat):
-            yield (None,
-                   quicksum(row[j]*param[ind]
-                            for j, ind in enumerate(param)),
-                   self.rhs[i])
-
-    def is_polyhedral(self):
-        return True
-
-    def is_ellipsoidal(self):
-        return False
-
-
-class WarpedGPSet(UncSet):
-    def __init__(self, gp, var, alpha, *args, **kwargs):
-        import scipy as sp
-        from rogp.util.numpy import _to_np_obj_array
-        self.gp = gp
-        self.var = var
-        self.alpha = alpha
-        z = _to_np_obj_array(var)
-        self.Sig = self.gp.predict_cov_latent(z)
-        self.mu = self.gp.predict_mu_latent(z)
-        self.F = sp.stats.chi2.ppf(alpha, len(self.var))
-        super().__init__(*args, **kwargs)
-        self._lib = True
-
-    def is_polyhedral(self):
-        return False
-
-    def is_ellipsoidal(self):
-        return False
