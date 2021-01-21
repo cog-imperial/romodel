@@ -13,6 +13,7 @@ from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
 from romodel.generator import RobustConstraint
 from romodel.duality import create_linear_dual_from
+from romodel.uncset import WarpedGP
 from itertools import chain
 from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
@@ -361,3 +362,18 @@ class UnknownTransformation(BaseRobustTransformation):
             uncset = param.uncset
             raise RuntimeError("Cannot reformulate UncSet with unknown "
                                "geometry: {}".format(uncset.name))
+
+
+@TransformationFactory.register('romodel.wgp',
+                                doc="Reformulate warped Gaussian Process set.")
+class WGPTransformation(BaseRobustTransformation):
+    def _apply_to(self, instance):
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            param = collect_uncparam(c)
+            uncset = param.uncset
+
+            if not uncset.__class__ == WarpedGP:
+                continue
+
