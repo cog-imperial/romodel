@@ -13,10 +13,11 @@ from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
 from romodel.generator import RobustConstraint
 from romodel.duality import create_linear_dual_from
-from romodel.uncset import WarpedGP
+from romodel.uncset import WarpedGPSet
 from itertools import chain
 from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
+import numpy as np
 
 
 class BaseRobustTransformation(Transformation):
@@ -371,9 +372,64 @@ class WGPTransformation(BaseRobustTransformation):
         for c in chain(self.get_uncertain_components(instance),
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
+            # Collect uncertain parameters and uncertainty set
             param = collect_uncparam(c)
             uncset = param.uncset
 
-            if not uncset.__class__ == WarpedGP:
+            # Only proceed if uncertainty set is WarpedGPSet
+            if not uncset.__class__ == WarpedGPSet:
                 continue
+            from rogp.util.numpy import _pyomo_to_np, _to_np_obj_array
 
+            repn = self.generate_repn_param(instance, c)
+
+            assert repn.is_linear(), ("Only constraints which are linear in "
+                                      "the uncertain parameters are valid for "
+                                      "uncertainty set WarpedGPSet.")
+
+            # Constraint may contain subset of elements of UncParam
+            index_set = [p.index() for p in repn.linear_vars]
+            x = [[xi] for xi in repn.linear_coefs]
+            x = _to_np_obj_array(x)
+
+            # Set up Block for Wolfe duality constraints
+            b = Block()
+            setattr(instance, c.name + '_counterpart', b)
+            # Set up extra variables
+            b.y = Var(param.index_set())
+            y = _pyomo_to_np(b.y, ind=index_set)
+            b.u = Var(within=NonNegativeReals)
+            u = _pyomo_to_np(b.u)
+
+            # Primal constraint
+            sub_map = {id(param[i]): b.y[i] for i in param}
+            if c.ctype is Constraint:
+                e_new = replace_expressions(c.body, substitution_map=sub_map)
+                b.primal = Constraint(rule=lambda x: (c.lower, e_new, c.upper))
+            else:
+                e_new = replace_expressions(c.expr, substitution_map=sub_map)
+                b.primal = Objective(expr=e_new, sense=c.sense)
+
+            # Calculate matrices
+            Sig = uncset.Sig
+            mu = uncset.mu
+            gp = uncset.gp
+            dHinv = 1/gp.warp_deriv(y)
+            dHinv = np.diag(dHinv[:, 0])
+            hz = gp.warp(y)
+
+            LHS = np.matmul(Sig, dHinv)
+            LHS = np.matmul(LHS, x)
+            RHS = LHS
+            LHS = LHS + 2*u*(hz - mu)
+            # Add stationarity condition
+            b.stationarity = ConstraintList()
+            for lhs in np.nditer(LHS, ['refs_ok']):
+                b.stationarity.add(lhs.item() == 0)
+            RHS = np.matmul(dHinv, RHS)
+            rhs = np.matmul(x.T, RHS)[0, 0]
+            lhs = 4*u[0, 0]**2*uncset.F
+            # Dual variable constraint
+            b.dual = Constraint(expr=lhs == rhs)
+
+            c.deactivate()
