@@ -44,7 +44,7 @@ class TestWarpedGP(unittest.TestCase):
 
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
 
-        t = pe.TransformationFactory('romodel.wgp')
+        t = pe.TransformationFactory('romodel.warpedgp')
         t.apply_to(m)
 
         self.assertTrue(hasattr(m, 'c_counterpart'))
@@ -90,7 +90,7 @@ class TestWarpedGP(unittest.TestCase):
 
         m.c = pe.Constraint(expr=m.x[0] + m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
 
-        t = pe.TransformationFactory('romodel.wgp')
+        t = pe.TransformationFactory('romodel.warpedgp')
         t.apply_to(m)
 
         self.assertTrue(hasattr(m, 'c_counterpart'))
@@ -138,7 +138,7 @@ class TestWarpedGP(unittest.TestCase):
 
         m.c = pe.Objective(expr=m.x[0] + m.x[0]*m.w[0] + m.x[1]*m.w[1])
 
-        t = pe.TransformationFactory('romodel.wgp')
+        t = pe.TransformationFactory('romodel.warpedgp')
         t.apply_to(m)
 
         self.assertTrue(hasattr(m, 'c_counterpart'))

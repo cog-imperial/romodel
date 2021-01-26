@@ -365,7 +365,7 @@ class UnknownTransformation(BaseRobustTransformation):
                                "geometry: {}".format(uncset.name))
 
 
-@TransformationFactory.register('romodel.wgp',
+@TransformationFactory.register('romodel.warpedgp',
                                 doc="Reformulate warped Gaussian Process set.")
 class WGPTransformation(BaseRobustTransformation):
     def _apply_to(self, instance):
