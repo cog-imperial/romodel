@@ -145,9 +145,10 @@ class AdjustableVar(IndexedComponent):
     def __init__(self, *args, **kwd):
         uncparams = kwd.pop('uncparams', None)
         bounds = kwd.pop('bounds', None)
-        assert type(bounds) is tuple, "bounds has to be a tuple."
         self._uncparams = uncparams
-        self._bounds = bounds
+        if bounds is not None:
+            assert type(bounds) is tuple, "bounds has to be a tuple."
+            self._bounds = bounds
 
         kwd.setdefault('ctype', AdjustableVar)
         IndexedComponent.__init__(self, *args, **kwd)
