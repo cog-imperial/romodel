@@ -85,7 +85,7 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
                 c_new = Objective(expr=e_new, sense=c.sense)
                 setattr(instance, c.name + '_ldr', c_new)
             # Constraints
-            elif c.type is Constraint:
+            elif c.ctype is Constraint:
                 e_new = replace_expressions(c.body, substitution_map=sub_map)
 
                 if c.equality:
