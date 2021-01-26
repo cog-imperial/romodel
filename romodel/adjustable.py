@@ -3,6 +3,7 @@ from pyomo.core import Objective, Var, Constraint, quicksum, ConstraintList
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.environ import inequality
 from itertools import chain
 from romodel.util import collect_adjustable
 from romodel.visitor import _expression_is_adjustable
@@ -120,3 +121,44 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
 
             # Do some checks?
             # Check c is linear in adj_var?
+
+
+@TransformationFactory.register('romodel.adjustable.nominal',
+                                doc=("Replace adjustable variables by "
+                                     "regular Pyomo variables"))
+class NominalAdjustableTransformation(BaseAdjustableTransformation):
+    def __init__(self):
+        super().__init__()
+        self._adjvar_dict = {}
+        self._cons_dict = {}
+
+    def _apply_to(self, instance):
+        for c in chain(self.get_adjustable_components(instance),
+                       self.get_adjustable_components(instance,
+                                                      component=Objective)):
+            # Collect adjustable var
+            adjvar = collect_adjustable(c)
+            # Get regular var
+            if adjvar.name not in self._adjvar_dict:
+                var = Var(adjvar.index_set(), bounds=adjvar._bounds)
+                setattr(instance, adjvar.name + '_nominal', var)
+                self._adjvar_dict[adjvar.name] = var
+            else:
+                var = self._adjvar_dict[adjvar.name]
+            # Construct substitution map
+            sub_map = {id(adjvar[i]): var[i] for i in adjvar}
+            # Replace AdjustableVar with Var
+            if c.ctype is Objective:
+                e_new = replace_expressions(c.expr, substitution_map=sub_map)
+                c_new = Objective(expr=e_new, sense=c.sense)
+            else:
+                e_new = replace_expressions(c.body, substitution_map=sub_map)
+                if c.equality:
+                    c_new = Constraint(expr=e_new == c.upper)
+                else:
+                    c_new = Constraint(expr=inequality(c.lower, e_new, c.upper))
+            setattr(instance, c.name + '_nominal', c_new)
+
+            self._cons_dict[c.name] = c_new
+
+            c.deactivate()

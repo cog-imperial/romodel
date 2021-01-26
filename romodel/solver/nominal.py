@@ -17,11 +17,14 @@ class NominalSolver(pyomo.opt.OptSolver):
         self._instance = args[0]
         super()._presolve(*args, **kwargs)
 
-    def _apply_solver(self):
+    def _apply_solver(self, keep_reformulation=False):
         start_time = time.time()
         instance = self._instance
 
         xfrm = TransformationFactory('romodel.nominal')
+        xfrm.apply_to(instance)
+
+        xfrm = TransformationFactory('romodel.adjustable.nominal')
         xfrm.apply_to(instance)
 
         if not self.options.solver:
@@ -37,6 +40,20 @@ class NominalSolver(pyomo.opt.OptSolver):
                                 tee=self._tee,
                                 timelimit=self._timelimit)
             self.results.append(results)
+
+        for adjvar_name in xfrm._adjvar_dict:
+            adjvar = getattr(instance, adjvar_name)
+            var = xfrm._adjvar_dict[adjvar_name]
+            for i in adjvar:
+                adjvar[i].value = var[i].value
+            instance.del_component(adjvar_name + '_nominal')
+
+        for cons_name in xfrm._cons_dict:
+            cons = getattr(instance, cons_name)
+            cons_nominal = self._cons_dict[cons_name]
+            cons.activate()
+            instance.del_component(cons_nominal.name)
+
 
         stop_time = time.time()
         self.wall_time = stop_time - start_time
