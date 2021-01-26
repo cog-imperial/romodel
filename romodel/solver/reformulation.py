@@ -28,6 +28,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
 
         transformations = ['romodel.ellipsoidal',
                            'romodel.polyhedral',
+                           'romodel.warpedgp',
                            'romodel.unknown']
         for transform in transformations:
             xfrm = TransformationFactory(transform)
