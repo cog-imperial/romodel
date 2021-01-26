@@ -77,33 +77,44 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
                                                for u in uncparams
                                                for j in u)
                        for i in adjvar}
-            e_new = replace_expressions(c.body, substitution_map=sub_map)
-
-            if c.equality:
-                repn = self.generate_repn_param(instance, e_new)
-
-                c_new = ConstraintList()
+            # Replace AdjustableVar by LDR
+            # Objectives
+            if c.ctype is Objective:
+                e_new = replace_expressions(c.expr, substitution_map=sub_map)
+                c_new = Objective(expr=e_new, sense=c.sense)
                 setattr(instance, c.name + '_ldr', c_new)
-                # Check if repn.constant is an expression
-                if repn.constant.__class__ in nonpyomo_leaf_types:
-                    if repn.constant != 0:
+            # Constraints
+            elif c.type is Constraint:
+                e_new = replace_expressions(c.body, substitution_map=sub_map)
+
+                if c.equality:
+                    repn = self.generate_repn_param(instance, e_new)
+
+                    c_new = ConstraintList()
+                    setattr(instance, c.name + '_ldr', c_new)
+                    # Check if repn.constant is an expression
+                    cons = repn.constant
+                    if cons.__class__ in nonpyomo_leaf_types:
+                        if cons != 0:
+                            raise ValueError("Can't reformulate constraint {} "
+                                             "with numeric constant "
+                                             "{}".format(c.name, cons))
+                    elif cons.is_potentially_variable():
+                        c_new.add(cons == 0)
+                    else:
                         raise ValueError("Can't reformulate constraint {} with"
-                                         " numeric constant "
-                                         "{}".format(c.name, repn.constant))
-                elif repn.constant.is_potentially_variable():
-                    c_new.add(repn.constant == 0)
+                                         " constant "
+                                         "{}".format(c.name, cons))
+                    # Add constraints for each uncparam
+                    for coef in repn.linear_coefs:
+                        c_new.add(coef == 0)
+                    for coef in repn.quadratic_coefs:
+                        c_new.add(coef == 0)
                 else:
-                    raise ValueError("Can't reformulate constraint {} with"
-                                     " constant "
-                                     "{}".format(c.name, repn.constant))
-                # Add constraints for each uncparam
-                for coef in repn.linear_coefs:
-                    c_new.add(coef == 0)
-                for coef in repn.quadratic_coefs:
-                    c_new.add(coef == 0)
-            else:
-                c_new = Constraint(rule=lambda x: (c.lower, e_new, c.upper))
-                setattr(instance, c.name + '_ldr', c_new)
+                    def c_rule(x):
+                        return (c.lower, e_new, c.upper)
+                    c_new = Constraint(rule=c_rule)
+                    setattr(instance, c.name + '_ldr', c_new)
 
             c.deactivate()
 
