@@ -53,10 +53,10 @@ class _AdjustableVarData(ComponentData, NumericValue):
         """Return the value for this uncertain parameter."""
         return self._value
 
-    # @value.setter
-    # def value(self, val):
-    #     """Set the value for this uncertain parameter."""
-    #     self._value = val
+    @value.setter
+    def value(self, val):
+        """Set the value for this uncertain parameter."""
+        self._value = val
 
     @property
     def nominal(self):
@@ -144,7 +144,10 @@ class AdjustableVar(IndexedComponent):
 
     def __init__(self, *args, **kwd):
         uncparams = kwd.pop('uncparams', None)
+        bounds = kwd.pop('bounds', None)
+        assert type(bounds) is tuple, "bounds has to be a tuple."
         self._uncparams = uncparams
+        self._bounds = bounds
 
         kwd.setdefault('ctype', AdjustableVar)
         IndexedComponent.__init__(self, *args, **kwd)
