@@ -48,12 +48,9 @@ class NominalSolver(pyomo.opt.OptSolver):
                 adjvar[i].value = var[i].value
             instance.del_component(adjvar_name + '_nominal')
 
-        for cons_name in xfrm._cons_dict:
-            cons = getattr(instance, cons_name)
-            cons_nominal = self._cons_dict[cons_name]
-            cons.activate()
-            instance.del_component(cons_nominal.name)
-
+        for c, c_nominal in xfrm._cons_dict.values():
+            c.activate()
+            c_nominal.parent_block().del_component(c_nominal)
 
         stop_time = time.time()
         self.wall_time = stop_time - start_time
