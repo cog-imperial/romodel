@@ -1,6 +1,6 @@
 from pyomo.environ import value
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.numvalue import NumericValue, is_fixed
 from weakref import ref as weakref_ref
 from pyomo.core import ModelComponentFactory
 from pyomo.core.base.indexed_component import (IndexedComponent,
@@ -70,6 +70,24 @@ class _AdjustableVarData(ComponentData, NumericValue):
     @property
     def lb(self):
         return self._lb
+
+    def setlb(self, val):
+        if is_fixed(val):
+            self._lb = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable lower "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
+
+    def setub(self, val):
+        if is_fixed(val):
+            self._ub = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable upper "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
 
     @property
     def ub(self):
@@ -207,7 +225,7 @@ class AdjustableVar(IndexedComponent):
                  ("Index", self._index if self.is_indexed() else None),
                  ],
                 self.iteritems(),
-                ("LB", "Value", "UB", "Fixed"),
+                ("Lower", "Value", "Upper", "Fixed"),
                 dataGen
                 )
 
