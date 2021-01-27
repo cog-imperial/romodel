@@ -2,7 +2,8 @@ import pyutilib.th as unittest
 import pyomo.environ as pe
 import romodel.examples
 import romodel as ro
-from romodel.adjustable import (LDRAdjustableTransformation)
+from romodel.adjustable import (LDRAdjustableTransformation,
+                                NominalAdjustableTransformation)
 from pyomo.opt import check_available_solvers
 from pyomo.repn import generate_standard_repn
 
@@ -55,6 +56,7 @@ class TestLDR(unittest.TestCase):
         m.y = ro.AdjustableVar([0, 1, 2], uncparams=[m.w])
         m.z = ro.AdjustableVar([0, 1], uncparams=[m.w, m.u])
         m.cons = pe.Constraint(expr=m.u + sum(m.z[i] for i in m.z) <= 1)
+        m.o = pe.Objective(expr=m.y[1] + m.u, sense=pe.maximize)
 
         t = LDRAdjustableTransformation()
         t.apply_to(m)
@@ -67,6 +69,15 @@ class TestLDR(unittest.TestCase):
                        for i in m.w for j in m.z)
         baseline = baseline.union((id(m.u[None]), id(m.z_u_coef[j, None]))
                                   for j in m.z)
+        for x in repn.quadratic_vars:
+            self.assertIn((id(x[0]), id(x[1])), baseline)
+
+        self.assertTrue(hasattr(m, 'o_ldr'))
+        repn = generate_standard_repn(m.o_ldr.expr)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(id(repn.linear_vars[0]), id(m.u))
+        self.assertEqual(len(repn.quadratic_vars), 3)
+        baseline = set((id(m.w[i]), id(m.y_w_coef[1, i])) for i in m.w)
         for x in repn.quadratic_vars:
             self.assertIn((id(x[0]), id(x[1])), baseline)
 
@@ -177,3 +188,69 @@ class TestAdjustable(unittest.TestCase):
         self.assertTrue(m.y[0].is_variable_type())
         self.assertFalse(m.y[1].is_parameter_type())
         self.assertIs(m.y[0].ctype, ro.AdjustableVar)
+
+
+class TestAdjustableNominal(unittest.TestCase):
+    def test_simple_adjustable(self):
+        m = pe.ConcreteModel()
+        m.w = ro.UncParam([0, 1, 2])
+        m.y = ro.AdjustableVar(uncparams=[m.w])
+        m.c = pe.Constraint(expr=m.w[0] + m.y <= 1)
+        m.o = pe.Objective(expr=m.y + 3, sense=pe.maximize)
+        t = NominalAdjustableTransformation()
+        t.apply_to(m)
+        self.assertTrue(hasattr(m, 'y_nominal'))
+        self.assertIs(m.y_nominal.ctype, pe.Var)
+        self.assertTrue(hasattr(m, 'c_nominal'))
+        repn = generate_standard_repn(m.c_nominal.body)
+        baseline = set([id(m.w[0]), id(m.y_nominal)])
+        for x in repn.linear_vars:
+            self.assertIn(id(x), baseline)
+        self.assertEqual(repn.linear_coefs, (1, 1))
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.quadratic_vars), 0)
+        self.assertTrue(hasattr(m, 'o_nominal'))
+        repn = generate_standard_repn(m.o_nominal.expr)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(id(repn.linear_vars[0]), id(m.y_nominal))
+        self.assertEqual(len(repn.quadratic_vars), 0)
+        self.assertEqual(len(repn.nonlinear_vars), 0)
+        self.assertEqual(repn.constant, 3)
+
+    def test_indexed_adjustable(self):
+        m = pe.ConcreteModel()
+        m.w = ro.UncParam([0, 1, 2])
+        m.y = ro.AdjustableVar(range(2), uncparams=[m.w], bounds=(0, 6))
+        m.y[1].fixed = True
+        m.y[1].value = 2
+        m.y[1].setub(5)
+        m.y[0].setlb(1)
+        m.c = pe.Constraint(expr=m.w[0] + m.y[0] + m.y[1] <= 1)
+        m.o = pe.Objective(expr=m.y[0] - m.y[1] + 3, sense=pe.maximize)
+        t = NominalAdjustableTransformation()
+        t.apply_to(m)
+        self.assertTrue(hasattr(m, 'y_nominal'))
+        self.assertIs(m.y_nominal.ctype, pe.Var)
+        self.assertTrue(m.y_nominal[1].fixed)
+        self.assertEqual(m.y_nominal[1].value, 2)
+        self.assertEqual(m.y_nominal[0].lb, 1)
+        self.assertEqual(m.y_nominal[1].lb, 0)
+        self.assertEqual(m.y_nominal[0].ub, 6)
+        self.assertEqual(m.y_nominal[1].ub, 5)
+        self.assertTrue(hasattr(m, 'c_nominal'))
+        repn = generate_standard_repn(m.c_nominal.body)
+        self.assertEqual(len(repn.linear_vars), 2)
+        baseline = set([id(m.w[0]),
+                        id(m.y_nominal[0])])
+        for x in repn.linear_vars:
+            self.assertIn(id(x), baseline)
+        self.assertEqual(repn.linear_coefs, (1, 1))
+        self.assertEqual(repn.constant, m.y_nominal[1])
+        self.assertEqual(len(repn.quadratic_vars), 0)
+        self.assertTrue(hasattr(m, 'o_nominal'))
+        repn = generate_standard_repn(m.o_nominal.expr, compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(id(x), id(repn.linear_vars[0]))
+        self.assertEqual(len(repn.quadratic_vars), 0)
+        self.assertEqual(len(repn.nonlinear_vars), 0)
+        self.assertEqual(repn.constant, 3-m.y[1])
