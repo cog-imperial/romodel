@@ -152,9 +152,14 @@ class NominalAdjustableTransformation(BaseAdjustableTransformation):
             adjvar = collect_adjustable(c)
             # Get regular var
             if adjvar.name not in self._adjvar_dict:
-                var = Var(adjvar.index_set(), bounds=adjvar._bounds)
+                var = Var(adjvar.index_set(), bounds=adjvar._bounds_init_value)
                 setattr(instance, adjvar.name + '_nominal', var)
                 self._adjvar_dict[adjvar.name] = var
+                for i in adjvar:
+                    var[i].fixed = adjvar[i].fixed
+                    var[i].setlb(adjvar[i].lb)
+                    var[i].setub(adjvar[i].ub)
+                    var[i].value = adjvar[i].value
             else:
                 var = self._adjvar_dict[adjvar.name]
             # Construct substitution map
@@ -171,6 +176,6 @@ class NominalAdjustableTransformation(BaseAdjustableTransformation):
                     c_new = Constraint(expr=inequality(c.lower, e_new, c.upper))
             setattr(instance, c.name + '_nominal', c_new)
 
-            self._cons_dict[c.name] = c_new
+            self._cons_dict[c.name] = (c, c_new)
 
             c.deactivate()
