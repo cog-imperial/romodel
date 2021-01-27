@@ -56,6 +56,21 @@ The robust model can be solved using one of ROmodels solvers:
     solver = pe.SolverFactory('romodel.cuts')
     solver.solve(m)
 
+## Example problems
+ROmodel includes a number of example problems:
+
+    1. [Knapsack problem]()
+    2. [Portfolio optimiation problem]()
+    3. [Pooling problem]() (Nonlinear robust optimization)
+    4. [Facility location problem]() (Adjustable robust optimization)
+    5. [Production planning problem]() (Warped GP based uncertainty sets)
+
+Further freely available examples of problems implemented in ROmodel include:
+
+    1. [State-Task-Network with degradation](https://github.com/johwiebe/stn)
+    2. [Drill scheduling problem](https://github.com/johwiebe/drilling)
+
+
 
 ## References & Funding
 This work was funded by an EPSRC/Schlumberger CASE studentship to J.W.
