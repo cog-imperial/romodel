@@ -1,5 +1,6 @@
+from pyomo.environ import value
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.numvalue import NumericValue, is_fixed
 from weakref import ref as weakref_ref
 from pyomo.core import ModelComponentFactory
 from pyomo.core.base.indexed_component import (IndexedComponent,
@@ -20,7 +21,7 @@ class _AdjustableVarData(ComponentData, NumericValue):
         nominal     The nominal value of this parameter.
     """
 
-    __slots__ = ('_value', '_nominal', '_fixed', '_bounds')
+    __slots__ = ('_value', '_fixed', '_lb', '_ub')
 
     def __init__(self, component):
         #
@@ -33,9 +34,9 @@ class _AdjustableVarData(ComponentData, NumericValue):
         # base NumericValue constructor.
         #
         self._value = None
-        self._nominal = None
         self._fixed = False
-        self._bounds = (None, None)
+        self._lb = None
+        self._ub = None
 
     def __getstate__(self):
         """This method must be defined because this class uses slots."""
@@ -48,6 +49,14 @@ class _AdjustableVarData(ComponentData, NumericValue):
         """ Return worst case value of this uncertain parameter."""
         return self.value
 
+    def has_lb(self):
+        lb = self.lb
+        return (lb is not None) and (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        ub = self.ub
+        return (ub is not None) and (value(ub) != float('inf'))
+
     @property
     def value(self):
         """Return the value for this uncertain parameter."""
@@ -59,14 +68,30 @@ class _AdjustableVarData(ComponentData, NumericValue):
         self._value = val
 
     @property
-    def nominal(self):
-        """Return the nominal value for this uncertain parameter."""
-        return self._nominal
+    def lb(self):
+        return self._lb
 
-    @nominal.setter
-    def nominal(self, val):
-        """Set the nominal value for this uncertain parameter."""
-        self._nominal = val
+    def setlb(self, val):
+        if is_fixed(val):
+            self._lb = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable lower "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
+
+    def setub(self, val):
+        if is_fixed(val):
+            self._ub = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable upper "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
+
+    @property
+    def ub(self):
+        return self._ub
 
     @property
     def fixed(self):
@@ -78,7 +103,7 @@ class _AdjustableVarData(ComponentData, NumericValue):
 
     @property
     def bounds(self):
-        return self._bounds
+        return (self.lb, self.ub)
 
     def is_fixed(self):
         """Returns True because this value is fixed."""
@@ -144,11 +169,14 @@ class AdjustableVar(IndexedComponent):
 
     def __init__(self, *args, **kwd):
         uncparams = kwd.pop('uncparams', None)
-        bounds = kwd.pop('bounds', None)
         self._uncparams = uncparams
-        if bounds is not None:
-            assert type(bounds) is tuple, "bounds has to be a tuple."
-            self._bounds = bounds
+
+        bounds = kwd.pop('bounds', None)
+        self._bounds_init_value = None
+        if type(bounds) is tuple:
+            self._bounds_init_value = bounds
+        elif bounds is not None:
+            raise ValueError("Keyword 'bounds' has to be a tuple")
 
         kwd.setdefault('ctype', AdjustableVar)
         IndexedComponent.__init__(self, *args, **kwd)
@@ -161,22 +189,28 @@ class AdjustableVar(IndexedComponent):
             return
         timer = ConstructionTimer(self)
 
-        nom = self._nominal
-
         if not self.is_indexed():
             self._data[None] = self
+            self._initialize_members((None,))
 
         else:
             self_weakref = weakref_ref(self)
             for ndx in self._index:
                 if ndx not in self._data:
                     self._data[ndx] = _AdjustableVarData(self)
-                self._data[ndx]._nominal = nom[ndx]
-                self._data[ndx]._value = nom[ndx]
                 self._component = self_weakref
+            self._initialize_members(self._index)
 
         self._constructed = True
         timer.report()
+
+    def _initialize_members(self, init_set):
+        if self._bounds_init_value is not None:
+            (lb, ub) = self._bounds_init_value
+            for key in init_set:
+                vardata = self._data[key]
+                vardata._lb = lb
+                vardata._ub = ub
 
     def _pprint(self):
         """
@@ -185,13 +219,13 @@ class AdjustableVar(IndexedComponent):
         dataGen = None  # stub
 
         def dataGen(i, x):
-            return (x.nominal, x.value)
+            return (x.lb, x.value, x.ub, x.fixed)
 
         return ([("Size", len(self)),
                  ("Index", self._index if self.is_indexed() else None),
                  ],
                 self.iteritems(),
-                ("Nominal", "Value"),
+                ("Lower", "Value", "Upper", "Fixed"),
                 dataGen
                 )
 

@@ -26,6 +26,16 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         start_time = time.time()
         instance = self._instance
 
+        # Reformulate adjustable variables
+        if not self.options.adjustable:
+            adjustable = 'romodel.adjustable.ldr'
+        else:
+            adjustable = self.options.adjustable
+
+        xfrm = TransformationFactory(adjustable)
+        xfrm.apply_to(instance)
+
+        # Reformulate uncertain parameters
         transformations = ['romodel.ellipsoidal',
                            'romodel.polyhedral',
                            'romodel.warpedgp',

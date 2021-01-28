@@ -9,24 +9,28 @@ cost_transport = [[2.0, 3.0, 1.5, 4.0, 3.3],
                   [3.4, 1.4, 2.1, 3.3, 1.6],
                   [2.6, 2.1, 2.0, 1.4, 1.3]]
 demand = [45, 30, 60, 55, 25]
-cov = [[1, 0, 0, 0, 0],
-       [0, 1, 0, 0, 0],
-       [0, 0, 1, 0, 0],
-       [0, 0, 0, 1, 0],
-       [0, 0, 0, 0, 1]]
 max_dem = [100, 140, 80, 150]
+
+# N = 1
+# M = 2
+# cost_facility = [100]
+# cost_transport = [[2.0, 3.0]]
+# demand = [45, 30]
+# max_dem = [200]
 
 
 def Facility():
     m = pe.ConcreteModel()
     # Define variables
     m.x = pe.Var(range(N), within=pe.Binary)
-    # m.y = pe.Var(range(N), range(M), within=pe.NonNegativeReals)
     # Define uncertainty set
-    m.uncset = ro.uncset.EllipsoidalSet(demand, cov)
+    m.uncset = ro.UncSet()
+    m.uncset.cons = pe.ConstraintList()
     # Define uncertain parameters
     m.demand = ro.UncParam(range(M), nominal=demand, uncset=m.uncset)
-    m.y = ro.AdjustableVar(range(N), range(M), bounds=(0, 100), uncparams=[m.demand])
+    m.y = ro.AdjustableVar(range(N), range(M), bounds=(0, None), uncparams=[m.demand])
+    for i in range(M):
+        m.uncset.cons.add(expr=pe.inequality(0.9*demand[i], m.demand[i], 1.1*demand[i]))
 
     # Add objective
     expr = 0

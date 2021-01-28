@@ -54,7 +54,8 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
     def __init__(self):
         super().__init__()
         self._coef_dict = {}
-        self._uncparam_dict = {}
+        self._adjvars = {}
+        self._expr_dict = {}
 
     def _apply_to(self, instance):
         for c in chain(self.get_adjustable_components(instance),
@@ -62,10 +63,12 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
                                                       component=Objective)):
             # Collect adjustable vars and uncparams
             adjvar = collect_adjustable(c)
+            if id(adjvar) not in self._adjvars:
+                self._adjvars[id(adjvar)] = adjvar
             uncparams = adjvar._uncparams
             # Create variables for LDR coefficients
             for u in uncparams:
-                if not self._coef_dict.get((adjvar.name, u.name), False):
+                if (adjvar.name, u.name) not in self._coef_dict:
                     coef = Var(adjvar.index_set(), u.index_set())
                     coef_name = adjvar.name + '_' + u.name + '_coef'
                     setattr(instance, coef_name, coef)
@@ -78,6 +81,7 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
                                                for u in uncparams
                                                for j in u)
                        for i in adjvar}
+            self._expr_dict[adjvar.name] = sub_map
             # Replace AdjustableVar by LDR
             # Objectives
             if c.ctype is Objective:
@@ -119,8 +123,16 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
 
             c.deactivate()
 
-            # Do some checks?
-            # Check c is linear in adj_var?
+        # Add constraints for bounds on AdjustableVar
+        for name, sub_map in self._expr_dict.items():
+            adjvar = getattr(instance, name)
+            cl = ConstraintList()
+            setattr(instance, adjvar.name + '_bounds', cl)
+            for i in adjvar:
+                if adjvar[i].has_lb():
+                    cl.add(adjvar[i].lb <= sub_map[id(adjvar[i])])
+                if adjvar[i].has_ub():
+                    cl.add(adjvar[i].ub >= sub_map[id(adjvar[i])])
 
 
 @TransformationFactory.register('romodel.adjustable.nominal',
@@ -140,9 +152,14 @@ class NominalAdjustableTransformation(BaseAdjustableTransformation):
             adjvar = collect_adjustable(c)
             # Get regular var
             if adjvar.name not in self._adjvar_dict:
-                var = Var(adjvar.index_set(), bounds=adjvar._bounds)
+                var = Var(adjvar.index_set(), bounds=adjvar._bounds_init_value)
                 setattr(instance, adjvar.name + '_nominal', var)
                 self._adjvar_dict[adjvar.name] = var
+                for i in adjvar:
+                    var[i].fixed = adjvar[i].fixed
+                    var[i].setlb(adjvar[i].lb)
+                    var[i].setub(adjvar[i].ub)
+                    var[i].value = adjvar[i].value
             else:
                 var = self._adjvar_dict[adjvar.name]
             # Construct substitution map
@@ -159,6 +176,6 @@ class NominalAdjustableTransformation(BaseAdjustableTransformation):
                     c_new = Constraint(expr=inequality(c.lower, e_new, c.upper))
             setattr(instance, c.name + '_nominal', c_new)
 
-            self._cons_dict[c.name] = c_new
+            self._cons_dict[c.name] = (c, c_new)
 
             c.deactivate()
