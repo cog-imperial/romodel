@@ -90,7 +90,7 @@ class UncSet(SimpleBlock):
             if c.has_ub():
                 mat.append([coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(c.upper - repn.constant)
-            elif c.has_lb():
+            if c.has_lb():
                 mat.append([-coef_dict.get(id(param[i]), 0) for i in param])
                 rhs.append(repn.constant - c.lower)
         self.mat = mat
