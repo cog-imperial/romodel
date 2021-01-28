@@ -78,6 +78,7 @@ class TestE2E(unittest.TestCase):
     def test_facility_ldr_reformulation(self):
         m = ex.Facility()
         solver = pe.SolverFactory('romodel.reformulation')
+        solver.options['NonConvex'] = 2
         solver.solve(m, tee=False)
 
     def test_facility_ldr_cuts(self):
