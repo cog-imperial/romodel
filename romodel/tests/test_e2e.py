@@ -74,3 +74,13 @@ class TestE2E(unittest.TestCase):
         m = ex.Facility()
         solver = pe.SolverFactory('romodel.nominal')
         solver.solve(m, tee=False)
+
+    def test_facility_ldr_reformulation(self):
+        m = ex.Facility()
+        solver = pe.SolverFactory('romodel.reformulation')
+        solver.solve(m, tee=False)
+
+    def test_facility_ldr_cuts(self):
+        m = ex.Facility()
+        solver = pe.SolverFactory('romodel.cuts')
+        solver.solve(m, tee=False)
