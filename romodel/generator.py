@@ -5,12 +5,14 @@ from pyomo.environ import (ConstraintList,
                            Objective,
                            Var,
                            quicksum,
+                           minimize,
                            maximize,
                            value,
                            SolverFactory)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.repn import generate_standard_repn
+from pyomo.opt import TerminationCondition
 from romodel import UncParam
 from romodel.visitor import identify_parent_components
 from collections import defaultdict
@@ -45,26 +47,60 @@ class RobustConstraintData(_BlockData):
         self._constraints = ConstraintList()
         self._constraints.add(nominal_expr)
 
+    def has_lb(self):
+        if self.lower is None or float('-inf'):
+            return False
+        else:
+            return True
+
+    def has_ub(self):
+        if self.upper is None or float('inf'):
+            return False
+        else:
+            return True
+
     def add_cut(self):
         """ Solve separation problem and add cut. """
-        sep = self.construct_separation_problem()
         # TODO: pass option
         opt = SolverFactory('gurobi')
         opt.options['NonConvex'] = 2
-        res = opt.solve(sep)
-        # Check results are okay
 
-        # Check feasibility?
+        feasible = True
+        if self.has_ub():
+            sep = self.construct_separation_problem(sense=maximize)
+            res = opt.solve(sep)
+            if (res.solver.termination_condition
+                    is not TerminationCondition.optimal):
+                raise RuntimeError(
+                        "Solver '{}' failed to solve separation "
+                        "problem.".format('gurobi')
+                        )
 
-        # Generate cut expression:
-        # uncparam = self._uncparam[0]
-        uncparam = sep.uncparam
-        expr = self._rule({i: uncparam[i].value for i in uncparam})
+            uncparam = sep.uncparam
+            expr = self._rule({i: uncparam[i].value for i in uncparam})
 
-        self._constraints.add((self.lower, expr, self.upper))
-        self.feasible = value(sep.obj <= self.upper)
+            self._constraints.add((self.lower, expr, self.upper))
+            feasible = feasible and value(sep.obj <= self.upper)
 
-        return self.feasible
+        if self.has_lb():
+            sep = self.construct_separation_problem(sense=minimize)
+            res = opt.solve(sep)
+            if (res.solver.termination_condition
+                    is not TerminationCondition.optimal):
+                raise RuntimeError(
+                        "Solver '{}' failed to solve separation "
+                        "problem.".format('gurobi')
+                        )
+
+            uncparam = sep.uncparam
+            expr = self._rule({i: uncparam[i].value for i in uncparam})
+
+            self._constraints.add((self.lower, expr, self.upper))
+            feasible = feasible and value(self.lower <= sep.obj)
+
+        self.feasible = feasible
+
+        return feasible
 
     def construct_separation_problem(self):
         m = ConcreteModel()
