@@ -8,5 +8,5 @@ setup(
     author_email='j.wiebe17@imperial.ac.uk',
     description='Pyomo robust optimization toolbox',
     packages=find_packages(),
-    install_requires=['pyomo'],
+    install_requires=['pyomo', 'numpy'],
 )
