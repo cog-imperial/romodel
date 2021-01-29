@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='romodel',
-    version='0.0.1',
+    version='0.0.2',
     url='https://github.com/johwiebe/romodel.git',
     author='Johannes Wiebe',
     author_email='j.wiebe17@imperial.ac.uk',
