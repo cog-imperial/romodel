@@ -85,3 +85,9 @@ class TestE2E(unittest.TestCase):
         m = ex.Facility()
         solver = pe.SolverFactory('romodel.cuts')
         solver.solve(m, tee=False)
+
+    def test_planning_wgp_reform(self):
+        m = ex.ProductionPlanning()
+        solver = pe.SolverFactory('romodel.reformulation')
+        solver.options['solver'] = 'ipopt'
+        solver.solve(m, tee=False)
