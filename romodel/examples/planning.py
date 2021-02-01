@@ -17,7 +17,7 @@ def generate_data(N, noise):
     return x, y
 
 
-def ProductionPlanning(alpha=0.90):
+def ProductionPlanning(alpha=0.92):
     import GPy
     import rogp
     # Train warped GP
