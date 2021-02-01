@@ -39,7 +39,7 @@ class TestWarpedGP(unittest.TestCase):
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))
 
-        m.uncset = ro.uncset.WarpedGPSet(gp, [[m.z[i]] for i in m.z], 0.95)
+        m.uncset = ro.uncset.WarpedGPSet(gp, m.z, 0.95)
         m.w = ro.UncParam(range(2), uncset=m.uncset)
 
         m.c = pe.Constraint(expr=m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
@@ -85,7 +85,7 @@ class TestWarpedGP(unittest.TestCase):
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))
 
-        m.uncset = ro.uncset.WarpedGPSet(gp, [[m.z[i]] for i in m.z], 0.95)
+        m.uncset = ro.uncset.WarpedGPSet(gp, {i: [m.z[i]] for i in m.z}, 0.95)
         m.w = ro.UncParam(range(2), uncset=m.uncset)
 
         m.c = pe.Constraint(expr=m.x[0] + m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
@@ -133,7 +133,7 @@ class TestWarpedGP(unittest.TestCase):
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))
 
-        m.uncset = ro.uncset.WarpedGPSet(gp, [[m.z[i]] for i in m.z], 0.95)
+        m.uncset = ro.uncset.WarpedGPSet(gp, m.z, 0.95)
         m.w = ro.UncParam(range(2), uncset=m.uncset)
 
         m.c = pe.Objective(expr=m.x[0] + m.x[0]*m.w[0] + m.x[1]*m.w[1])

@@ -411,9 +411,23 @@ class WGPTransformation(BaseRobustTransformation):
                 b.primal = Objective(expr=e_new, sense=c.sense)
 
             # Calculate matrices
-            Sig = uncset.Sig
-            mu = uncset.mu
             gp = uncset.gp
+            var = uncset.var
+            if type(var) is dict:
+                pass
+                z = [var[i] for i in index_set]
+                z = _to_np_obj_array(z)
+            else:
+                var = var[0]
+                assert var.index_set() == param.index_set(), (
+                        "Index set of `UncParam` and `var` in `WarpedGPSet` "
+                        "should be the same. Alternatively use "
+                        "var = {index: [list of vars]"
+                        )
+                z = _pyomo_to_np(var, ind=index_set)
+
+            Sig = gp.predict_cov_latent(z)
+            mu = gp.predict_mu_latent(z)
             dHinv = 1/gp.warp_deriv(y)
             dHinv = np.diag(dHinv[:, 0])
             hz = gp.warp(y)

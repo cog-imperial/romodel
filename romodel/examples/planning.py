@@ -30,8 +30,10 @@ def ProductionPlanning(alpha=0.90):
     # Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var(range(T), within=pe.NonNegativeReals, bounds=(xmin, xmax))
+    for i in m.x:
+        m.x[i].value = (xmin + xmax)/2
     # Uncertainty set
-    m.uncset = ro.uncset.WarpedGPSet(gp, [[m.x[t]] for t in m.x], alpha)
+    m.uncset = ro.uncset.WarpedGPSet(gp, m.x, alpha)
     # Uncertain parameter
     m.demand = ro.UncParam(range(T), uncset=m.uncset)
     # Uncertain objective
