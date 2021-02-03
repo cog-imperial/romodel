@@ -9,8 +9,9 @@ class WarpedGPSet(UncSet):
         if type(var) is dict:
             self.var = var
         else:
-            assert var.ctype is Var, ("Parameter 'var' has to be either a dict,"
-                                      " or a Pyomo variable.")
+            if var.ctype is not Var:
+                raise ValueError("Parameter 'var' has to be either a dict,"
+                                 " or a Pyomo variable.")
             self.var = [var]
         self.alpha = alpha
         self.F = sp.stats.chi2.ppf(alpha, len(self.var))
