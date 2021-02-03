@@ -7,6 +7,7 @@ from pyomo.environ import (Constraint,
                            minimize,
                            ConstraintList,
                            NonNegativeReals,
+                           NonPositiveReals,
                            Block)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
@@ -372,6 +373,12 @@ class WGPTransformation(BaseRobustTransformation):
         for c in chain(self.get_uncertain_components(instance),
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
+            if c.ctype is Constraint and c.equality:
+                raise RuntimeError(
+                        "'UncParam's cannot appear in equality constraints, "
+                        "unless the constraint also contains adjustable "
+                        "variables.")
+
             # Collect uncertain parameters and uncertainty set
             param = collect_uncparam(c)
             uncset = param.uncset
@@ -398,7 +405,23 @@ class WGPTransformation(BaseRobustTransformation):
             # Set up extra variables
             b.y = Var(param.index_set())
             y = _pyomo_to_np(b.y, ind=index_set)
-            b.u = Var(within=NonNegativeReals)
+            # Setup dual vars based on sense
+            if c.ctype is Constraint:
+                if c.has_ub() and not c.has_lb():
+                    b.u = Var(within=NonPositiveReals)
+                elif not c.has_ub() and c.has_lb():
+                    b.u = Var(within=NonNegativeReals)
+                else:
+                    raise RuntimeError(
+                            "Uncertain constraints with 'WarpedGPSet' "
+                            "currently only support either an upper or a "
+                            "lower bound, not both."
+                            )
+            elif c.ctype is Objective:
+                if c.sense is maximize:
+                    b.u = Var(within=NonPositiveReals)
+                else:
+                    b.u = Var(within=NonNegativeReals)
             u = _pyomo_to_np(b.u)
 
             # Primal constraint
