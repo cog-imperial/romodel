@@ -8,6 +8,7 @@ class TestNominalSolver(unittest.TestCase):
     def test_nominal_solver(self):
         m = romodel.examples.Knapsack()
         opt = pe.SolverFactory('romodel.nominal')
+        opt.options['solver'] = 'gurobi_direct'
         opt.solve(m)
 
         self.assertEqual(m.value(), 25)
