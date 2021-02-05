@@ -68,18 +68,28 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
             uncparams = adjvar._uncparams
             # Create variables for LDR coefficients
             for u in uncparams:
-                if (adjvar.name, u.name) not in self._coef_dict:
-                    coef = Var(adjvar.index_set(), u.index_set())
-                    coef_name = adjvar.name + '_' + u.name + '_coef'
+                parent = u.parent_component()
+                if (adjvar.name, parent.name) not in self._coef_dict:
+                    coef = Var(adjvar.index_set(), parent.index_set())
+                    coef_name = adjvar.name + '_' + parent.name + '_coef'
                     setattr(instance, coef_name, coef)
-                    self._coef_dict[adjvar.name, u.name] = coef
+                    self._coef_dict[adjvar.name, parent.name] = coef
 
             # Create substitution map
             def coef(u):
-                return self._coef_dict[adjvar.name, u.name]
-            sub_map = {id(adjvar[i]): quicksum(u[j] * coef(u)[i, j]
+                return self._coef_dict[adjvar.name, u.parent_component().name]
+
+            def gen_index(u):
+                if hasattr(u, 'index'):
+                    yield u.index()
+                else:
+                    for i in u:
+                        yield i
+
+            sub_map = {id(adjvar[i]): quicksum(u.parent_component()[j]
+                                               * coef(u)[i, j]
                                                for u in uncparams
-                                               for j in u)
+                                               for j in gen_index(u))
                        for i in adjvar}
             self._expr_dict[adjvar.name] = sub_map
             # Replace AdjustableVar by LDR
@@ -125,7 +135,7 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
 
         # Add constraints for bounds on AdjustableVar
         for name, sub_map in self._expr_dict.items():
-            adjvar = getattr(instance, name)
+            adjvar = instance.find_component(name)
             cl = ConstraintList()
             setattr(instance, adjvar.name + '_bounds', cl)
             for i in adjvar:
