@@ -9,12 +9,13 @@ from pyomo.environ import (Constraint,
                            NonNegativeReals,
                            NonPositiveReals,
                            Block)
+from pyomo.environ import sqrt as pyomo_sqrt
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
 from romodel.generator import RobustConstraint
 from romodel.duality import create_linear_dual_from
-from romodel.uncset import WarpedGPSet
+from romodel.uncset import WarpedGPSet, GPSet
 from itertools import chain
 from romodel.util import collect_uncparam
 from pyomo.core.expr.visitor import replace_expressions
@@ -445,7 +446,7 @@ class WGPTransformation(BaseRobustTransformation):
                 assert var.index_set() == param.index_set(), (
                         "Index set of `UncParam` and `var` in `WarpedGPSet` "
                         "should be the same. Alternatively use "
-                        "var = {index: [list of vars]"
+                        "var = {index: [list of vars]}"
                         )
                 z = _pyomo_to_np(var, ind=index_set)
 
@@ -468,5 +469,81 @@ class WGPTransformation(BaseRobustTransformation):
             lhs = 4*u[0, 0]**2*uncset.F
             # Dual variable constraint
             b.dual = Constraint(expr=lhs == rhs)
+
+            c.deactivate()
+
+
+@TransformationFactory.register('romodel.gp',
+                                doc="Reformulate Gaussian Process set.")
+class GPTransformation(BaseRobustTransformation):
+    def _apply_to(self, instance):
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            if c.ctype is Constraint and c.equality:
+                raise RuntimeError(
+                        "'UncParam's cannot appear in equality constraints, "
+                        "unless the constraint also contains adjustable "
+                        "variables.")
+
+            # Collect uncertain parameters and uncertainty set
+            param = collect_uncparam(c)
+            uncset = param.uncset
+
+            # Only proceed if uncertainty set is GPSet
+            if not uncset.__class__ == GPSet:
+                continue
+            from rogp.util.numpy import _pyomo_to_np, _to_np_obj_array
+
+            repn = self.generate_repn_param(instance, c)
+
+            assert repn.is_linear(), ("Only constraints which are linear in "
+                                      "the uncertain parameters are valid for "
+                                      "uncertainty set 'GPSet'.")
+
+            # Constraint may contain subset of elements of UncParam
+            index_set = [p.index() for p in repn.linear_vars]
+            x = [[xi] for xi in repn.linear_coefs]
+            x = _to_np_obj_array(x)
+
+            # Calculate matrices
+            gp = uncset.gp
+            var = uncset.var
+            if type(var) is dict:
+                pass
+                z = [var[i] for i in index_set]
+                z = _to_np_obj_array(z)
+            else:
+                var = var[0]
+                assert var.index_set() == param.index_set(), (
+                        "Index set of `UncParam` and `var` in `GPSet` "
+                        "should be the same. Alternatively use "
+                        "var = {index: [list of vars]}"
+                        )
+                z = _pyomo_to_np(var, ind=index_set)
+
+            Sig = gp.predict_cov(z)
+            mu = gp.predict_mu(z)
+
+            nominal = np.matmul(mu.T, x)
+
+            padding = np.matmul(x.T, Sig)
+            padding = np.matmul(padding, x)
+            padding = uncset.F**2*pyomo_sqrt(padding[0, 0])
+
+            # Counterpart
+            if c.ctype is Constraint:
+                if c.has_ub():
+                    e_new = nominal + padding <= c.upper
+                    c_new = Constraint(expr=e_new)
+                    setattr(instance, c.name + '_counterpart_upper', c_new)
+                if c.has_lb():
+                    e_new = nominal - padding >= c.lower
+                    c_new = Constraint(expr=e_new)
+                    setattr(instance, c.name + '_counterpart_lower', c_new)
+            else:
+                e_new = nominal + padding*c.sense
+                c_new = Objective(expr=e_new, sense=c.sense)
+                setattr(instance, c.name + '_counterpart', c_new)
 
             c.deactivate()
