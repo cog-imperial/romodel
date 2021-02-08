@@ -38,6 +38,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
         # Reformulate uncertain parameters
         transformations = ['romodel.ellipsoidal',
                            'romodel.polyhedral',
+                           'romodel.gp',
                            'romodel.warpedgp',
                            'romodel.unknown']
         for transform in transformations:
