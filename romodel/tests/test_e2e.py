@@ -91,3 +91,10 @@ class TestE2E(unittest.TestCase):
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['solver'] = 'ipopt'
         solver.solve(m, tee=False)
+
+    def test_planning_gp_reform(self):
+        m = ex.ProductionPlanning()
+        m.demand.uncset = m.uncset_standard
+        solver = pe.SolverFactory('romodel.reformulation')
+        solver.options['solver'] = 'ipopt'
+        solver.solve(m, tee=False)
