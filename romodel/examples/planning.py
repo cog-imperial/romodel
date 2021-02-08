@@ -20,22 +20,29 @@ def generate_data(N, noise):
 def ProductionPlanning(alpha=0.92):
     import GPy
     import rogp
-    # Train warped GP
+    # Generate data GP
     x, y = generate_data(50, 0.05)
+    # Train standard GP
     kernel = GPy.kern.RBF(input_dim=1, variance=1., lengthscale=1.)
-    gp = GPy.models.WarpedGP(x, y, kernel=kernel, warping_terms=3)
+    gp = GPy.models.GPRegression(x, y, kernel=kernel)
     gp.optimize(messages=True)
     # Make Pyomo
     gp = rogp.from_gpy(gp)
+    # Train warped GP
+    wgp = GPy.models.WarpedGP(x, y, kernel=kernel, warping_terms=3)
+    wgp.optimize(messages=True)
+    # Make Pyomo
+    wgp = rogp.from_gpy(wgp)
     # Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var(range(T), within=pe.NonNegativeReals, bounds=(xmin, xmax))
     for i in m.x:
         m.x[i].value = (xmin + xmax)/2
     # Uncertainty set
-    m.uncset = ro.uncset.WarpedGPSet(gp, m.x, alpha)
+    m.uncset_warped = ro.uncset.WarpedGPSet(gp, m.x, alpha)
+    m.uncset_standard = ro.uncset.GPSet(gp, m.x, alpha)
     # Uncertain parameter
-    m.demand = ro.UncParam(range(T), uncset=m.uncset)
+    m.demand = ro.UncParam(range(T), uncset=m.uncset_warped)
     # Uncertain objective
     profit = sum(m.x[t]*m.demand[t] for t in range(T))
     profit -= sum(cost[t]*m.x[t] for t in range(T))
