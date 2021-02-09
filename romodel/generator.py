@@ -48,13 +48,13 @@ class RobustConstraintData(_BlockData):
         self._constraints.add(nominal_expr)
 
     def has_lb(self):
-        if self.lower is None or float('-inf'):
+        if self.lower is None or self.lower is float('-inf'):
             return False
         else:
             return True
 
     def has_ub(self):
-        if self.upper is None or float('inf'):
+        if self.upper is None or self.upper is float('inf'):
             return False
         else:
             return True
@@ -102,7 +102,7 @@ class RobustConstraintData(_BlockData):
 
         return feasible
 
-    def construct_separation_problem(self):
+    def construct_separation_problem(self, sense=maximize):
         m = ConcreteModel()
         uncparam = self._uncparam[0]
         index = uncparam.index_set()
@@ -112,7 +112,7 @@ class RobustConstraintData(_BlockData):
         # collect current coefficient values
         expr = self._rule(m.uncparam, compute_values=True)
         # construct objective with current coefficient values
-        m.obj = Objective(expr=expr, sense=maximize)
+        m.obj = Objective(expr=expr, sense=sense)
 
         # construct constraints from uncertainty set
         uncset = self._uncset[0]
