@@ -5,9 +5,11 @@ from pyomo.environ import (Constraint,
                            Objective,
                            maximize,
                            minimize,
+                           value,
                            ConstraintList,
                            NonNegativeReals,
-                           Block)
+                           Block,
+                           native_numeric_types)
 from pyomo.core import Transformation, TransformationFactory
 from pyomo.repn import generate_standard_repn
 from romodel.visitor import _expression_is_uncertain
@@ -270,9 +272,9 @@ class PolyhedralTransformation(BaseRobustTransformation):
         # Dual constraints
         blk.cons = ConstraintList()
         for i in range(m):
-            blk.cons.add(quicksum(P[j][i]*blk.var[j]
-                                  for j in range(n))
-                         == c[i])
+            lhs = quicksum(P[j][i]*blk.var[j] for j in range(n))
+            if lhs.__class__ not in native_numeric_types or lhs != 0:
+                blk.cons.add(lhs == c[i])
 
         return blk
 
