@@ -3,17 +3,16 @@ import pyomo.environ as pe
 import romodel.examples
 import romodel as ro
 from romodel.reformulate import (EllipsoidalTransformation,
-                                 PolyhedralTransformation,
-                                 NominalTransformation)
+                                 PolyhedralTransformation)
 from pyomo.opt import check_available_solvers
 from pyomo.repn import generate_standard_repn
 
-solvers = check_available_solvers('gurobi')
+solvers = check_available_solvers('gurobi_direct')
 
 
 class TestReformulation(unittest.TestCase):
-    @unittest.skipIf('gurobi' not in solvers,
-                     'gurobi not available')
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'gurobi_direct not available')
     def test_polyhedral(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.P
@@ -23,18 +22,18 @@ class TestReformulation(unittest.TestCase):
         self.assertFalse(m.Elib.is_polyhedral())
         t = PolyhedralTransformation()
         t.apply_to(m)
-        solver = pe.SolverFactory('gurobi')
+        solver = pe.SolverFactory('gurobi_direct')
         solver.solve(m)
         self.assertEqual(m.value(), 19.)
 
-    @unittest.skipIf('gurobi' not in solvers,
-                     'gurobi not available')
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'gurobi_direct not available')
     def test_polyhedral_lib(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.Plib
         t = PolyhedralTransformation()
         t.apply_to(m)
-        solver = pe.SolverFactory('gurobi')
+        solver = pe.SolverFactory('gurobi_direct')
         solver.solve(m)
         self.assertEqual(m.value(), 19.)
 
@@ -110,8 +109,8 @@ class TestReformulation(unittest.TestCase):
         self.assertTrue(hasattr(m, 'obj_new'))
         self.assertIs(m.obj_new.sense, pe.maximize)
 
-    @unittest.skipIf('gurobi' not in solvers,
-                     'gurobi not available')
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'gurobi_direct not available')
     def test_ellipsoidal(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.E
@@ -121,19 +120,19 @@ class TestReformulation(unittest.TestCase):
         self.assertTrue(m.Elib.is_ellipsoidal())
         t = EllipsoidalTransformation()
         t.apply_to(m)
-        solver = pe.SolverFactory('gurobi')
+        solver = pe.SolverFactory('gurobi_direct')
         solver.options['NonConvex'] = 2
         solver.solve(m)
         self.assertEqual(m.value(), 19.)
 
-    @unittest.skipIf('gurobi' not in solvers,
-                     'gurobi not available')
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'gurobi_direct not available')
     def test_ellipsoidal_lib(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.Elib
         t = EllipsoidalTransformation()
         t.apply_to(m)
-        solver = pe.SolverFactory('gurobi')
+        solver = pe.SolverFactory('gurobi_direct')
         solver.options['NonConvex'] = 2
         solver.solve(m)
         self.assertEqual(m.value(), 19.)

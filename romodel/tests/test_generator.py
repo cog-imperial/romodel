@@ -2,10 +2,7 @@ import pyomo.environ as pe
 import pyutilib.th as unittest
 import romodel as ro
 from romodel.generator import generate_linear_repn
-from pyomo.opt import check_available_solvers
 from pyomo.repn import generate_standard_repn
-
-solvers = check_available_solvers('gurobi')
 
 
 class TestGenerator(unittest.TestCase):
