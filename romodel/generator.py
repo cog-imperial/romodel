@@ -60,7 +60,6 @@ class RobustConstraintData(_BlockData):
 
     def add_cut(self, solver='gurobi', options={}):
         """ Solve separation problem and add cut. """
-        # TODO: pass option
         opt = SolverFactory(solver)
         for key, val in options.items():
             opt.options[key] = val

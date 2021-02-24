@@ -72,7 +72,8 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                                 timelimit=self._timelimit)
             # Add initial cut to check feasibility
             for g in generators:
-                feasible[g.name] = g.add_cut()
+                feasible[g.name] = g.add_cut(solver=subsolver,
+                                             options=subsolver_options)
             feas, total = sum(feasible.values()), len(feasible)
             print("{0}/{1} constraints robustly feasible. "
                   "Add cuts and resolve.".format(feas, total))
