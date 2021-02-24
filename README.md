@@ -10,7 +10,6 @@ To install ROmodel use:
         
         pip install https://github.com/johwiebe/romodel
 
-
 ## Getting started 
 
 This introduction assumes basic familiarity with modeling optimization problems

@@ -4,10 +4,7 @@ import romodel.examples
 import romodel as ro
 from romodel.adjustable import (LDRAdjustableTransformation,
                                 NominalAdjustableTransformation)
-from pyomo.opt import check_available_solvers
 from pyomo.repn import generate_standard_repn
-
-solvers = check_available_solvers('gurobi')
 
 
 class TestLDR(unittest.TestCase):

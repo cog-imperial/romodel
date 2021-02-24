@@ -49,6 +49,16 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         else:
             max_iter = self.options.max_iter
 
+        if not self.options.subsolver:
+            subsolver = solver
+        else:
+            subsolver = self.options.subsolver
+
+        if not self.options.subsolver_options:
+            subsolver_options = self.options
+        else:
+            subsolver_options = self.options.subsolver_options
+
         print("Using solver {}\n".format(solver))
 
         with pyomo.opt.SolverFactory(solver) as opt:
@@ -62,7 +72,8 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                                 timelimit=self._timelimit)
             # Add initial cut to check feasibility
             for g in generators:
-                feasible[g.name] = g.add_cut()
+                feasible[g.name] = g.add_cut(solver=subsolver,
+                                             options=subsolver_options)
             feas, total = sum(feasible.values()), len(feasible)
             print("{0}/{1} constraints robustly feasible. "
                   "Add cuts and resolve.".format(feas, total))
@@ -75,7 +86,8 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                 for g in generators:
                     # Only add cut if uncertain constraint isnt feasible
                     if not feasible[g.name]:
-                        feasible[g.name] = g.add_cut()
+                        feasible[g.name] = g.add_cut(solver=subsolver,
+                                                     options=subsolver_options)
                 self.results.append(results)
 
                 n_iter += 1

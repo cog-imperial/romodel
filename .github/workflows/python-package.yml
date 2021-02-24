@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,8 +26,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
+        pip install flake8 pytest wheel
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -i https://pypi.gurobi.com gurobipy
+        python -m pip install git+https://github.com/johwiebe/rogp.git
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -36,4 +38,4 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest
+        python -m unittest discover -s romodel/tests
