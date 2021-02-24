@@ -15,7 +15,6 @@ from pyomo.repn import generate_standard_repn
 from pyomo.opt import TerminationCondition
 from romodel import UncParam
 from romodel.visitor import identify_parent_components
-from collections import defaultdict
 
 
 @declare_custom_block(name='RobustConstraint')
@@ -59,11 +58,12 @@ class RobustConstraintData(_BlockData):
         else:
             return True
 
-    def add_cut(self):
+    def add_cut(self, solver='gurobi', options={}):
         """ Solve separation problem and add cut. """
         # TODO: pass option
-        opt = SolverFactory('gurobi')
-        opt.options['NonConvex'] = 2
+        opt = SolverFactory(solver)
+        for key, val in options.items():
+            opt.options[key] = val
 
         feasible = True
         if self.has_ub():
@@ -89,7 +89,7 @@ class RobustConstraintData(_BlockData):
                     is not TerminationCondition.optimal):
                 raise RuntimeError(
                         "Solver '{}' failed to solve separation "
-                        "problem.".format('gurobi')
+                        "problem.".format(opt.name)
                         )
 
             uncparam = sep.uncparam
