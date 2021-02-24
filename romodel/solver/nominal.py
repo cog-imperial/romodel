@@ -42,7 +42,7 @@ class NominalSolver(pyomo.opt.OptSolver):
             self.results.append(results)
 
         for adjvar_name in xfrm._adjvar_dict:
-            adjvar = getattr(instance, adjvar_name)
+            adjvar = instance.find_component(adjvar_name)
             var = xfrm._adjvar_dict[adjvar_name]
             for i in adjvar:
                 adjvar[i].value = var[i].value
