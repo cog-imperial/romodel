@@ -65,15 +65,15 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
             adjvar = collect_adjustable(c)
             if id(adjvar) not in self._adjvars:
                 self._adjvars[id(adjvar)] = adjvar
-            uncparams = adjvar._uncparams
             # Create variables for LDR coefficients
-            for u in uncparams:
-                parent = u.parent_component()
-                if (adjvar.name, parent.name) not in self._coef_dict:
-                    coef = Var(adjvar.index_set(), parent.index_set())
-                    coef_name = adjvar.name + '_' + parent.name + '_coef'
-                    setattr(instance, coef_name, coef)
-                    self._coef_dict[adjvar.name, parent.name] = coef
+            for i in adjvar:
+                for u in adjvar[i].uncparams:
+                    parent = u.parent_component()
+                    if (adjvar.name, parent.name) not in self._coef_dict:
+                        coef = Var(adjvar.index_set(), parent.index_set())
+                        coef_name = adjvar.name + '_' + parent.name + '_coef'
+                        setattr(instance, coef_name, coef)
+                        self._coef_dict[adjvar.name, parent.name] = coef
 
             # Create substitution map
             def coef(u):
@@ -86,10 +86,10 @@ class LDRAdjustableTransformation(BaseAdjustableTransformation):
                     for i in u:
                         yield i
 
-            sub_map = {id(adjvar[i]): quicksum(u.parent_component()[j]
-                                               * coef(u)[i, j]
-                                               for u in uncparams
-                                               for j in gen_index(u))
+            sub_map = {id(adjvar[i]): sum(u.parent_component()[j]
+                                          * coef(u)[i, j]
+                                          for u in adjvar[i].uncparams
+                                          for j in gen_index(u))
                        for i in adjvar}
             self._expr_dict[adjvar.name] = sub_map
             # Replace AdjustableVar by LDR

@@ -21,7 +21,7 @@ class _AdjustableVarData(ComponentData, NumericValue):
         nominal     The nominal value of this parameter.
     """
 
-    __slots__ = ('_value', '_fixed', '_lb', '_ub')
+    __slots__ = ('_value', '_fixed', '_lb', '_ub', '_uncparams')
 
     def __init__(self, component):
         #
@@ -37,6 +37,7 @@ class _AdjustableVarData(ComponentData, NumericValue):
         self._fixed = False
         self._lb = None
         self._ub = None
+        self._uncparams = None
 
     def __getstate__(self):
         """This method must be defined because this class uses slots."""
@@ -104,6 +105,13 @@ class _AdjustableVarData(ComponentData, NumericValue):
     @property
     def bounds(self):
         return (self.lb, self.ub)
+
+    @property
+    def uncparams(self):
+        return self._uncparams
+
+    def set_uncparams(self, uncparams):
+        self._uncparams = uncparams
 
     def is_fixed(self):
         """Returns True because this value is fixed."""
@@ -211,6 +219,10 @@ class AdjustableVar(IndexedComponent):
                 vardata = self._data[key]
                 vardata._lb = lb
                 vardata._ub = ub
+        if self._uncparams is not None:
+            for key in init_set:
+                vardata = self._data[key]
+                vardata._uncparams = self._uncparams
 
     def _pprint(self):
         """
