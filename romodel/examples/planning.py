@@ -39,7 +39,7 @@ def ProductionPlanning(alpha=0.92):
     for i in m.x:
         m.x[i].value = (xmin + xmax)/2
     # Uncertainty set
-    m.uncset_warped = ro.uncset.WarpedGPSet(gp, m.x, alpha)
+    m.uncset_warped = ro.uncset.WarpedGPSet(wgp, m.x, alpha)
     m.uncset_standard = ro.uncset.GPSet(gp, m.x, alpha)
     # Uncertain parameter
     m.demand = ro.UncParam(range(T), uncset=m.uncset_warped)
