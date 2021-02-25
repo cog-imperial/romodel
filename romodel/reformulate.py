@@ -5,11 +5,10 @@ from pyomo.environ import (Constraint,
                            Objective,
                            maximize,
                            minimize,
-                           value,
                            ConstraintList,
                            NonNegativeReals,
                            NonPositiveReals,
-                           Block
+                           Block,
                            native_numeric_types)
 from pyomo.environ import sqrt as pyomo_sqrt
 from pyomo.core import Transformation, TransformationFactory
