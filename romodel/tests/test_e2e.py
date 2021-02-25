@@ -3,7 +3,7 @@ import pyomo.environ as pe
 import romodel.examples as ex
 from pyomo.opt import check_available_solvers
 
-solvers = check_available_solvers('gurobi_direct')
+solvers = check_available_solvers('gurobi_direct', 'ipopt')
 
 
 class TestE2E(unittest.TestCase):
@@ -154,3 +154,7 @@ class TestE2E(unittest.TestCase):
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['solver'] = 'ipopt'
         solver.solve(m, tee=False)
+
+
+if __name__ == '__main__':
+    unittest.main()
