@@ -1,8 +1,9 @@
-from pyomo.core import ModelComponentFactory, Component, Var
+from pyomo.environ import value
+from pyomo.core import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import (IndexedComponent,
                                                UnindexedComponent_set)
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.numvalue import NumericValue, is_fixed
 from weakref import ref as weakref_ref
 from pyomo.common.timing import ConstructionTimer
 from collections import defaultdict
@@ -78,7 +79,7 @@ class _UncParamData(ComponentData, NumericValue):
         nominal     The nominal value of this parameter.
     """
 
-    __slots__ = ('_value', '_nominal', '_fixed', '_bounds')
+    __slots__ = ('_value', '_nominal', '_fixed', '_lb', '_ub')
 
     def __init__(self, component):
         #
@@ -93,7 +94,8 @@ class _UncParamData(ComponentData, NumericValue):
         self._value = None
         self._nominal = None
         self._fixed = False
-        self._bounds = (None, None)
+        self._lb = None
+        self._ub = None
 
     def __getstate__(self):
         """This method must be defined because this class uses slots."""
@@ -135,8 +137,42 @@ class _UncParamData(ComponentData, NumericValue):
         self._fixed = val
 
     @property
+    def ub(self):
+        return self._ub
+
+    @property
+    def lb(self):
+        return self._lb
+
+    def has_lb(self):
+        lb = self.lb
+        return (lb is not None) and (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        ub = self.ub
+        return (ub is not None) and (value(ub) != float('inf'))
+
+    def setlb(self, val):
+        if is_fixed(val):
+            self._lb = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable lower "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
+
+    def setub(self, val):
+        if is_fixed(val):
+            self._ub = val
+        else:
+            raise ValueError(
+                    "Non-fixed input of type '%s' supplied as variable upper "
+                    "bound - legal types must be fixed expressions or variables."
+                    % (type(val),))
+
+    @property
     def bounds(self):
-        return self._bounds
+        return (self.lb, self.ub)
 
     def is_fixed(self):
         """Returns True because this value is fixed."""
@@ -204,6 +240,13 @@ class UncParam(IndexedComponent):
         uncset = kwd.pop('uncset', None)
         self._uncset = uncset
 
+        bounds = kwd.pop('bounds', None)
+        self._bounds_init_value = None
+        if type(bounds) is tuple:
+            self._bounds_init_value = bounds
+        elif bounds is not None:
+            raise ValueError("Keyword 'bounds' has to be a tuple")
+
         kwd.setdefault('ctype', UncParam)
         IndexedComponent.__init__(self, *args, **kwd)
 
@@ -237,6 +280,10 @@ class UncParam(IndexedComponent):
                 self._data[ndx]._nominal = nom[ndx]
                 self._data[ndx]._value = nom[ndx]
                 self._component = self_weakref
+                if self._bounds_init_value is not None:
+                    lb, ub = self._bounds_init_value
+                    self._data[ndx]._lb = lb
+                    self._data[ndx]._ub = ub
 
         self._constructed = True
         timer.report()

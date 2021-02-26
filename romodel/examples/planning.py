@@ -45,7 +45,7 @@ def ProductionPlanning(alpha=0.92, warped=True):
     else:
         m.uncset = ro.uncset.GPSet(gp, m.x, alpha)
     # Uncertain parameter
-    m.demand = ro.UncParam(range(T), uncset=m.uncset)
+    m.demand = ro.UncParam(range(T), uncset=m.uncset, bounds=(0, 10))
     # Uncertain objective
     profit = sum(m.x[t]*m.demand[t] for t in range(T))
     profit -= sum(cost[t]*m.x[t] for t in range(T))

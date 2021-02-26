@@ -406,6 +406,10 @@ class WGPTransformation(BaseRobustTransformation):
             setattr(instance, c.name + '_counterpart', b)
             # Set up extra variables
             b.y = Var(param.index_set())
+            # Set bounds for extra variables based on UncParam bounds
+            for i in param:
+                b.y[i].setlb(param[i].lb)
+                b.y[i].setub(param[i].ub)
             y = _pyomo_to_np(b.y, ind=index_set)
             # Setup dual vars based on sense
             if c.ctype is Constraint:
