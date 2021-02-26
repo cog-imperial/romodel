@@ -97,7 +97,9 @@ class TestE2E(unittest.TestCase):
         solver.options['solver'] = 'gurobi_direct'
         solver.options['NonConvex'] = 2
         solver.options['TimeLimit'] = 60
+        solver.options['MIPGap'] = 0.02
         solver.solve(m, tee=False)
+        m = ex.Pooling()
         m.price_product.uncset = m.P
         solver.solve(m, tee=False)
 
@@ -149,8 +151,7 @@ class TestE2E(unittest.TestCase):
         solver.solve(m, tee=False)
 
     def test_planning_gp_reform(self):
-        m = ex.ProductionPlanning()
-        m.demand.uncset = m.uncset_standard
+        m = ex.ProductionPlanning(warped=False)
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['solver'] = 'ipopt'
         solver.solve(m, tee=False)
