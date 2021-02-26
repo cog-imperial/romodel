@@ -17,32 +17,35 @@ def generate_data(N, noise):
     return x, y
 
 
-def ProductionPlanning(alpha=0.92):
+def ProductionPlanning(alpha=0.92, warped=True):
     import GPy
     import rogp
     # Generate data GP
-    x, y = generate_data(50, 0.05)
-    # Train standard GP
+    x, y = generate_data(50, 0.01)
+    # Train GP
     kernel = GPy.kern.RBF(input_dim=1, variance=1., lengthscale=1.)
-    gp = GPy.models.GPRegression(x, y, kernel=kernel)
-    gp.optimize(messages=True)
-    # Make Pyomo
-    gp = rogp.from_gpy(gp)
-    # Train warped GP
-    wgp = GPy.models.WarpedGP(x, y, kernel=kernel, warping_terms=3)
-    wgp.optimize(messages=True)
-    # Make Pyomo
-    wgp = rogp.from_gpy(wgp)
+    if warped:
+        gp = GPy.models.WarpedGP(x, y, kernel=kernel, warping_terms=3)
+        gp.optimize(messages=True)
+        # Make Pyomo
+        gp = rogp.from_gpy(gp, tanh=False)
+    else:
+        gp = GPy.models.GPRegression(x, y, kernel=kernel)
+        gp.optimize(messages=True)
+        # Make Pyomo
+        gp = rogp.from_gpy(gp)
     # Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var(range(T), within=pe.NonNegativeReals, bounds=(xmin, xmax))
     for i in m.x:
         m.x[i].value = (xmin + xmax)/2
     # Uncertainty set
-    m.uncset_warped = ro.uncset.WarpedGPSet(wgp, m.x, alpha)
-    m.uncset_standard = ro.uncset.GPSet(gp, m.x, alpha)
+    if warped:
+        m.uncset = ro.uncset.WarpedGPSet(gp, m.x, alpha)
+    else:
+        m.uncset = ro.uncset.GPSet(gp, m.x, alpha)
     # Uncertain parameter
-    m.demand = ro.UncParam(range(T), uncset=m.uncset_warped)
+    m.demand = ro.UncParam(range(T), uncset=m.uncset)
     # Uncertain objective
     profit = sum(m.x[t]*m.demand[t] for t in range(T))
     profit -= sum(cost[t]*m.x[t] for t in range(T))
