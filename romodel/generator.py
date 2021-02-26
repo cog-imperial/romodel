@@ -64,6 +64,11 @@ class RobustConstraintData(_BlockData):
         for key, val in options.items():
             opt.options[key] = val
 
+        if 'subsolver_tolerance' in options:
+            eps = options['subsolver_tolerance']
+        else:
+            eps = 1e-5
+
         feasible = True
         if self.has_ub():
             sep = self.construct_separation_problem(sense=maximize)
@@ -79,7 +84,7 @@ class RobustConstraintData(_BlockData):
             expr = self._rule({i: uncparam[i].value for i in uncparam})
 
             self._constraints.add((self.lower, expr, self.upper))
-            feasible = feasible and value(sep.obj <= self.upper)
+            feasible = feasible and value(sep.obj <= self.upper + eps)
 
         if self.has_lb():
             sep = self.construct_separation_problem(sense=minimize)
@@ -95,7 +100,7 @@ class RobustConstraintData(_BlockData):
             expr = self._rule({i: uncparam[i].value for i in uncparam})
 
             self._constraints.add((self.lower, expr, self.upper))
-            feasible = feasible and value(self.lower <= sep.obj)
+            feasible = feasible and value(self.lower <= sep.obj + eps)
 
         self.feasible = feasible
 
