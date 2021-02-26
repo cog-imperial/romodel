@@ -526,7 +526,7 @@ class GPTransformation(BaseRobustTransformation):
             Sig = gp.predict_cov(z)
             mu = gp.predict_mu(z)
 
-            nominal = np.matmul(mu.T, x)
+            nominal = np.matmul(mu.T, x)[0, 0]
 
             padding = np.matmul(x.T, Sig)
             padding = np.matmul(padding, x)
