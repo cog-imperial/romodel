@@ -30,7 +30,11 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install -i https://pypi.gurobi.com gurobipy
         python -m pip install git+https://github.com/johwiebe/rogp.git
-        sudo apt-get install libopenblas-dev gfortran liblapack-dev glpk-utils
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
+            install libopenblas-dev gfortran liblapack-dev glpk-utils
+        sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
+
     - name: Setup TPL package directories
       run: |
         TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
