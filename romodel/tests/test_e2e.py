@@ -148,7 +148,7 @@ class TestE2E(unittest.TestCase):
         m = ex.ProductionPlanning()
         solver = pe.SolverFactory('romodel.reformulation')
         solver.options['solver'] = 'ipopt'
-        solver.solve(m, tee=False)
+        solver.solve(m, tee=True)
 
     @unittest.skipIf('ipopt' not in solvers,
                      'ipopt not available')
