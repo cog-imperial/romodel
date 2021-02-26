@@ -31,6 +31,15 @@ jobs:
         pip install -i https://pypi.gurobi.com gurobipy
         python -m pip install git+https://github.com/johwiebe/rogp.git
         sudo apt-get install libopenblas-dev gfortran liblapack-dev glpk-utils
+    - name: Setup TPL package directories
+      run: |
+        TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
+        mkdir -p "$TPL_DIR"
+        DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
+        mkdir -p "$DOWNLOAD_DIR"
+        echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
+        echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
