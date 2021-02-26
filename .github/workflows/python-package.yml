@@ -32,7 +32,7 @@ jobs:
         python -m pip install git+https://github.com/johwiebe/rogp.git
         mkdir -p ${GITHUB_WORKSPACE}/cache/os
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils libgfortran3
+            install libopenblas-dev gfortran liblapack-dev glpk-utils libgfortran5
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Setup TPL package directories
