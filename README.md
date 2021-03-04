@@ -17,7 +17,7 @@ in Pyomo. ROmodel introduces two main components for modeling robust optimizatio
 problems: `UncParam` for modeling uncertain parameters and `UncSet` for
 modeling uncertainty sets.
 
-To start using ROmodel, import Pyomo and romodel:
+To start using ROmodel, import Pyomo and ROmodel:
 
     import pyomo.environ as pe
     import romodel as ro
@@ -58,7 +58,7 @@ The robust model can be solved using one of ROmodels solvers:
 ## Example problems
 ROmodel includes a number of example problems:
 
-1. [Knapsack problem]()
+1. [Knapsack problem](docs/knapsack.md)
 2. [Portfolio optimiation problem]()
 3. [Pooling problem]() (Nonlinear robust optimization)
 4. [Facility location problem]() (Adjustable robust optimization)
