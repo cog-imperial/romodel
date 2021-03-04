@@ -46,12 +46,10 @@ of the Knapsack problem with uncertain weights:
     m.value = Objective(expr=sum(v[i]*m.x[i] for i in tools), sense=maximize)
     m.weight = Constraint(expr=sum(m.w[i]*m.x[i] for i in tools) <= limit)
 
-    # Define Uncertainty set
+    # Define Polyhedral uncertainty set ( U = {w | Pw <= rhs} )
     perm = itertools.product([1, -1], repeat=len(tools))
     P = [i for i in perm]
     rhs = [sum(p[i]*w[t] for i, t in enumerate(tools)) + 5.5 for p in P]
-
-    # Polyhedral set
     M.P.cons = ConstraintList()
     for i, p in enumerate(P):
         M.P.cons.add(sum(M.w[t]*p[i] for i, t in enumerate(tools)) <= rhs[i])
