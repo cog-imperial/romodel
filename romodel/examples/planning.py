@@ -21,7 +21,7 @@ def ProductionPlanning(alpha=0.92, warped=True):
     import GPy
     import rogp
     # Generate data GP
-    x, y = generate_data(50, 0.01)
+    x, y = generate_data(50, 0.03)
     # Train GP
     kernel = GPy.kern.RBF(input_dim=1, variance=1., lengthscale=1.)
     if warped:
@@ -45,10 +45,13 @@ def ProductionPlanning(alpha=0.92, warped=True):
     else:
         m.uncset = ro.uncset.GPSet(gp, m.x, alpha)
     # Uncertain parameter
-    m.demand = ro.UncParam(range(T), uncset=m.uncset, bounds=(0, 10))
+    m.demand = ro.UncParam(range(T), uncset=m.uncset, bounds=(0, 1))
     # Uncertain objective
     profit = sum(m.x[t]*m.demand[t] for t in range(T))
     profit -= sum(cost[t]*m.x[t] for t in range(T))
-    m.Obj = pe.Objective(expr=profit, sense=pe.maximize)
+    m.u = pe.Var()
+    m.profit = pe.Constraint(expr=profit >= m.u)
+    m.Obj = pe.Objective(expr=m.u, sense=pe.maximize)
+    # m.Obj = pe.Objective(expr=profit, sense=pe.maximize)
 
     return m
