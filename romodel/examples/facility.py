@@ -11,12 +11,15 @@ cost_transport = [[2.0, 3.0, 1.5, 4.0, 3.3],
 demand = [45, 30, 60, 55, 25]
 max_dem = [100, 140, 80, 150]
 
-# N = 1
+# N = 2
 # M = 2
-# cost_facility = [100]
-# cost_transport = [[2.0, 3.0]]
-# demand = [45, 30]
-# max_dem = [200]
+# cost_facility = [100, 140, 80, 150]
+# cost_transport = [[2.0, 3.0, 1.5],
+#                   [1.5, 0.4, 1.0],
+#                   [3.4, 1.4, 2.1],
+#                   [2.6, 2.1, 2.0]]
+# demand = [65, 40]
+# max_dem = [100, 140, 80, 150]
 
 
 def Facility():
@@ -49,5 +52,7 @@ def Facility():
         lhs = sum(m.y[i, j] for j in range(M))
         return lhs <= max_dem[i]*m.x[i]
     m.max_dem = pe.Constraint(range(N), rule=max_demand_rule)
+
+    # m.bound_x = pe.Constraint(expr=pe.quicksum(m.x[i] for i in m.x) >= 2)
 
     return m
