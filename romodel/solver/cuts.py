@@ -1,16 +1,18 @@
 """ Reformulation solver. """
 import time
 import pyutilib.misc
-import pyomo.opt
+from pyomo.opt import (TerminationCondition,
+                       SolverFactory,
+                       OptSolver,
+                       SolverResults)
 from pyomo.core import TransformationFactory
 
 
-@pyomo.opt.SolverFactory.register('romodel.cuts',
-                                  doc='Robust cutting plane solver.')
-class CuttingPlaneSolver(pyomo.opt.OptSolver):
+@SolverFactory.register('romodel.cuts', doc='Robust cutting plane solver.')
+class CuttingPlaneSolver(OptSolver):
     def __init__(self, **kwargs):
         kwargs['type'] = 'romodel.cuts'
-        pyomo.opt.OptSolver.__init__(self, **kwargs)
+        OptSolver.__init__(self, **kwargs)
         self._metasolver = True
 
     def _presolve(self, *args, **kwargs):
@@ -37,6 +39,8 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         generators = tdata.generators
         print("Adding {} cutting plane generators.".format(len(generators)))
 
+        instance.transformation_time = time.time() - start_time
+
         # Need to set this up for main and sub solver
         if not self.options.solver:
             # Use glpk instead
@@ -54,14 +58,12 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         else:
             subsolver = self.options.subsolver
 
-        if not self.options.subsolver_options:
-            subsolver_options = self.options
-        else:
-            subsolver_options = self.options.subsolver_options
+        self.options.setdefault('subsolver_options', self.options)
+        subsolver_options = self.options.pop('subsolver_options')
 
         print("Using solver {}\n".format(solver))
 
-        with pyomo.opt.SolverFactory(solver) as opt:
+        with SolverFactory(solver) as opt:
             self.results = []
             feasible = {}
             # Solve nominal problem
@@ -80,14 +82,15 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
             # Keep adding cuts until feasible
             n_iter = 1
             while (not all(feasible.values())) and (n_iter < max_iter):
+                if (results.solver.termination_condition
+                        is not TerminationCondition.optimal):
+                    break
                 results = opt.solve(instance,
                                     tee=self._tee,
                                     timelimit=self._timelimit)
                 for g in generators:
-                    # Only add cut if uncertain constraint isnt feasible
-                    if not feasible[g.name]:
-                        feasible[g.name] = g.add_cut(solver=subsolver,
-                                                     options=subsolver_options)
+                    feasible[g.name] = g.add_cut(solver=subsolver,
+                                                 options=subsolver_options)
                 self.results.append(results)
 
                 n_iter += 1
@@ -102,6 +105,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
                 print("\nEnding after reaching max_iter={} iterations. "
                       "Solution is not robustly feasible".format(max_iter))
 
+        self.termination_condition = results.solver.termination_condition
         stop_time = time.time()
         self.wall_time = stop_time - start_time
         self.results_obj = self._setup_results_obj()
@@ -121,7 +125,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
         #
         # Create a results object
         #
-        results = pyomo.opt.SolverResults()
+        results = SolverResults()
         #
         # SOLVER
         #
@@ -136,7 +140,7 @@ class CuttingPlaneSolver(pyomo.opt.OptSolver):
             solv.cpu_time = sum(cpu_)
         #
         # TODO: detect infeasibilities, etc
-        solv.termination_condition = pyomo.opt.TerminationCondition.optimal
+        solv.termination_condition = self.termination_condition
         #
         # PROBLEM
         #
