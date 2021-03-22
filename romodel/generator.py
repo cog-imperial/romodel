@@ -58,21 +58,11 @@ class RobustConstraintData(_BlockData):
         else:
             return True
 
-    def add_cut(self, solver='gurobi', options={}):
-        """ Solve separation problem and add cut. """
-        opt = SolverFactory(solver)
-        for key, val in options.items():
-            opt.options[key] = val
-
-        if 'subsolver_tolerance' in options:
-            eps = options['subsolver_tolerance']
-        else:
-            eps = 1e-5
-
-        feasible = True
-        if self.has_ub():
-            sep = self.construct_separation_problem(sense=maximize)
-            res = opt.solve(sep)
+    def _add_cut(self, sense):
+        sep = self.construct_separation_problem(sense=sense)
+        sep.name = "Sep"
+        if not sep.obj.expr.is_constant():
+            res = self.opt.solve(sep)
             if (res.solver.termination_condition
                     is not TerminationCondition.optimal):
                 raise RuntimeError(
@@ -80,27 +70,38 @@ class RobustConstraintData(_BlockData):
                         "problem.".format('gurobi')
                         )
 
+        if sense is minimize:
+            feasible = value(self.lower <= sep.obj + self.eps)
+        else:
+            feasible = value(sep.obj <= self.upper + self.eps)
+
+        if not feasible:
             uncparam = sep.uncparam
             expr = self._rule({i: uncparam[i].value for i in uncparam})
-
             self._constraints.add((self.lower, expr, self.upper))
-            feasible = feasible and value(sep.obj <= self.upper + eps)
+
+        return feasible
+
+    def add_cut(self, solver='gurobi', options={}):
+        """ Solve separation problem and add cut. """
+        self.opt = SolverFactory(solver)
+        for key, val in options.items():
+            self.opt.options[key] = val
+
+        if 'subsolver_tolerance' in options:
+            self.eps = options['subsolver_tolerance']
+        else:
+            self.eps = 1e-5
+
+        feasible = True
+        if self.has_ub():
+            feasible = feasible and self._add_cut(maximize)
 
         if self.has_lb():
-            sep = self.construct_separation_problem(sense=minimize)
-            res = opt.solve(sep)
-            if (res.solver.termination_condition
-                    is not TerminationCondition.optimal):
-                raise RuntimeError(
-                        "Solver '{}' failed to solve separation "
-                        "problem.".format(opt.name)
-                        )
+            feasible = feasible and self._add_cut(minimize)
 
-            uncparam = sep.uncparam
-            expr = self._rule({i: uncparam[i].value for i in uncparam})
-
-            self._constraints.add((self.lower, expr, self.upper))
-            feasible = feasible and value(self.lower <= sep.obj + eps)
+        if feasible is None:
+            import ipdb; ipdb.set_trace()
 
         self.feasible = feasible
 

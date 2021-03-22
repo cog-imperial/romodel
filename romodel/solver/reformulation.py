@@ -41,9 +41,20 @@ class ReformulationSolver(pyomo.opt.OptSolver):
                            'romodel.gp',
                            'romodel.warpedgp',
                            'romodel.unknown']
+        transformation_kwargs = {'romodel.ellipsoidal': [],
+                                 'romodel.polyhedral': [],
+                                 'romodel.gp': [],
+                                 'romodel.warpedgp': ['initialize_wolfe'],
+                                 'romodel.unknown': []}
         for transform in transformations:
             xfrm = TransformationFactory(transform)
-            xfrm.apply_to(instance)
+            kwargs = {}
+            for kw in transformation_kwargs[transform]:
+                if self.options[kw]:
+                    kwargs[kw] = self.options[kw]
+            xfrm.apply_to(instance, **kwargs)
+
+        instance.transformation_time = time.time() - start_time
 
         if not self.options.solver:
             solver = 'gurobi'
@@ -60,6 +71,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
 
         stop_time = time.time()
         self.wall_time = stop_time - start_time
+        self.termination_condition = results.solver.termination_condition
         self.results_obj = self._setup_results_obj()
         #
         # Return the sub-solver return condition value and log
@@ -89,7 +101,7 @@ class ReformulationSolver(pyomo.opt.OptSolver):
             solv.cpu_time = sum(cpu_)
         #
         # TODO: detect infeasibilities, etc
-        solv.termination_condition = pyomo.opt.TerminationCondition.optimal
+        solv.termination_condition = self.termination_condition
         #
         # PROBLEM
         #

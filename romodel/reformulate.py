@@ -371,7 +371,7 @@ class UnknownTransformation(BaseRobustTransformation):
 @TransformationFactory.register('romodel.warpedgp',
                                 doc="Reformulate warped Gaussian Process set.")
 class WGPTransformation(BaseRobustTransformation):
-    def _apply_to(self, instance):
+    def _apply_to(self, instance, initialize_wolfe=False):
         for c in chain(self.get_uncertain_components(instance),
                        self.get_uncertain_components(instance,
                                                      component=Objective)):
@@ -408,8 +408,12 @@ class WGPTransformation(BaseRobustTransformation):
             b.y = Var(param.index_set())
             # Set bounds for extra variables based on UncParam bounds
             for i in param:
-                b.y[i].setlb(param[i].lb)
-                b.y[i].setub(param[i].ub)
+                lb, ub = param[i].lb, param[i].ub
+                b.y[i].setlb(lb)
+                b.y[i].setub(ub)
+                if ((lb is not None and lb is not float('-inf'))
+                        and (ub is not None and ub is not float('inf'))):
+                    b.y[i].value = (ub + lb)/2
             y = _pyomo_to_np(b.y, ind=index_set)
             # Setup dual vars based on sense
             if c.ctype is Constraint:
@@ -472,6 +476,13 @@ class WGPTransformation(BaseRobustTransformation):
             RHS = np.matmul(dHinv, RHS)
             rhs = np.matmul(x.T, RHS)[0, 0]
             lhs = 4*u[0, 0]**2*uncset.F
+            # Set consistent initial value for u (helps convergence)
+            if initialize_wolfe:
+                u0 = np.sqrt(rhs()/4/uncset.F)
+                if u[0, 0].ub == 0:
+                    u[0, 0].value = -u0
+                elif u[0, 0].lb == 0:
+                    u[0, 0].value = u0
             # Dual variable constraint
             b.dual = Constraint(expr=lhs == rhs)
 
@@ -530,11 +541,11 @@ class GPTransformation(BaseRobustTransformation):
             Sig = gp.predict_cov(z)
             mu = gp.predict_mu(z)
 
-            nominal = np.matmul(mu.T, x)[0, 0]
+            nominal = np.matmul(mu.T, x)[0, 0] + repn.constant
 
             padding = np.matmul(x.T, Sig)
             padding = np.matmul(padding, x)
-            padding = uncset.F**2*pyomo_sqrt(padding[0, 0])
+            padding = uncset.F*pyomo_sqrt(padding[0, 0])
 
             # Counterpart
             if c.ctype is Constraint:
