@@ -8,7 +8,7 @@ also implements a number of algorithms for solving these problems.
 
 To install ROmodel use:
         
-        pip install https://github.com/johwiebe/romodel
+        pip install git+https://github.com/johwiebe/romodel.git
 
 ## Getting started 
 
