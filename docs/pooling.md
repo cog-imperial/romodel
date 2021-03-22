@@ -65,4 +65,4 @@ non-convex quadratically constrained problems, e.g. gurobi:
     # Allow non-convex problems
     solver.options['NonConvex'] = 2
 
-The full code is available [here](../romodel/examples/pooling.py)
+The full code is available [here](../romodel/examples/pooling.py).
