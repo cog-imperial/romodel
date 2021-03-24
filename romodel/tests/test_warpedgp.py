@@ -34,7 +34,6 @@ class TestWarpedGP(unittest.TestCase):
     def test_simple_gp(self):
         m = pe.ConcreteModel()
         gp, norm = train_warped_gp(20, 0.05)
-        gp = rogp.from_gpy(gp)
 
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))
@@ -80,7 +79,6 @@ class TestWarpedGP(unittest.TestCase):
     def test_simple_gp_constant(self):
         m = pe.ConcreteModel()
         gp, norm = train_warped_gp(20, 0.05)
-        gp = rogp.from_gpy(gp)
 
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))
@@ -128,7 +126,6 @@ class TestWarpedGP(unittest.TestCase):
     def test_objective(self):
         m = pe.ConcreteModel()
         gp, norm = train_warped_gp(20, 0.05)
-        gp = rogp.from_gpy(gp)
 
         m.x = pe.Var(range(2))
         m.z = pe.Var(range(2))

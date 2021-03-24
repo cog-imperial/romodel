@@ -19,7 +19,6 @@ def generate_data(N, noise):
 
 def ProductionPlanning(alpha=0.92, warped=True):
     import GPy
-    import rogp
     # Generate data GP
     x, y = generate_data(50, 0.03)
     # Train GP
@@ -27,13 +26,9 @@ def ProductionPlanning(alpha=0.92, warped=True):
     if warped:
         gp = GPy.models.WarpedGP(x, y, kernel=kernel, warping_terms=3)
         gp.optimize(messages=True)
-        # Make Pyomo
-        gp = rogp.from_gpy(gp, tanh=False)
     else:
         gp = GPy.models.GPRegression(x, y, kernel=kernel)
         gp.optimize(messages=True)
-        # Make Pyomo
-        gp = rogp.from_gpy(gp)
     # Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var(range(T), within=pe.NonNegativeReals, bounds=(xmin, xmax))

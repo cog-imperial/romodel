@@ -3,9 +3,10 @@ from pyomo.environ import Var
 
 
 class WarpedGPSet(UncSet):
-    def __init__(self, gp, var, alpha, *args, **kwargs):
+    def __init__(self, gp, var, alpha, tanh=False, *args, **kwargs):
         import scipy as sp
-        self.gp = gp
+        import rogp
+        self.gp = rogp.from_gpy(gp, tanh=tanh)
         if type(var) is dict:
             self.var = var
         else:
@@ -28,7 +29,8 @@ class WarpedGPSet(UncSet):
 class GPSet(UncSet):
     def __init__(self, gp, var, alpha, *args, **kwargs):
         import scipy as sp
-        self.gp = gp
+        import rogp
+        self.gp = rogp.from_gpy(gp)
         if type(var) is dict:
             self.var = var
         else:
