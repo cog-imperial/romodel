@@ -7,8 +7,10 @@ also implements a number of algorithms for solving these problems.
 ## Install
 
 To install ROmodel use:
-        
-        pip install git+https://github.com/johwiebe/romodel.git
+
+```bash        
+pip install git+https://github.com/johwiebe/romodel.git
+```
 
 ## Getting started 
 
@@ -19,41 +21,51 @@ modeling uncertainty sets.
 
 To start using ROmodel, import Pyomo and ROmodel:
 
-    import pyomo.environ as pe
-    import romodel as ro
+```python
+import pyomo.environ as pe
+import romodel as ro
+```
 
 Create a Pyomo model (ROmodel is currently only tested with ConcreteModel) and
 some variables:
 
-    m = pe.ConcreteModel()
-    # Create an indexed variable
-    m.x = pe.Var([0, 1])
+```python
+m = pe.ConcreteModel()
+# Create an indexed variable
+m.x = pe.Var([0, 1])
+```
 
 Next, create an uncertainty set and some uncertain parameters:
 
-    # Create a generic uncertainty set
-    m.U = ro.UncSet()
-    # Create an indexed uncertain parameter
-    m.w = ro.UncParam([0, 1], uncset=m.U, nominal=[0.5, 0.8])
+```python
+# Create a generic uncertainty set
+m.U = ro.UncSet()
+# Create an indexed uncertain parameter
+m.w = ro.UncParam([0, 1], uncset=m.U, nominal=[0.5, 0.8])
+```
 
 Uncertain constraints (or objectives) are created implicitly by using uncertain
 parameters in constraint expressions:
 
-    # Create an uncertain constraint 
-    m.c = pe.Constraint(expr = m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
-    m.o = pe.Objective(expr=m.x[0], sense=pe.maximize)
+```python
+# Create an uncertain constraint 
+m.c = pe.Constraint(expr = m.x[0]*m.w[0] + m.x[1]*m.w[1] <= 1)
+m.o = pe.Objective(expr=m.x[0], sense=pe.maximize)
+```
 
 The robust model can be solved using one of ROmodels solvers:
 
-    # Solve nominal problem
-    solver = pe.SolverFacotry('romodel.nominal')
-    solver.solve(m)
-    # Solve robust problem using reformulation
-    solver = pe.SolverFactory('romodel.reformulation')
-    solver.solve(m)
-    # Solve robust problem using cutting planes
-    solver = pe.SolverFactory('romodel.cuts')
-    solver.solve(m)
+```python
+# Solve nominal problem
+solver = pe.SolverFacotry('romodel.nominal')
+solver.solve(m)
+# Solve robust problem using reformulation
+solver = pe.SolverFactory('romodel.reformulation')
+solver.solve(m)
+# Solve robust problem using cutting planes
+solver = pe.SolverFactory('romodel.cuts')
+solver.solve(m)
+```
 
 ## Example problems
 ROmodel includes a number of example problems:

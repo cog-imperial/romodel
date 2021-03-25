@@ -8,18 +8,20 @@ the total value is as large as possible.
 ## The nominal problem
 We use a simple Knapsack implementation from the Pyomo [example library](https://github.com/Pyomo/pyomo/blob/main/examples/pyomo/concrete/knapsack-concrete.py). Parameters of the problem are the value `v` and weight `w` of each item and the upper limit for the weight. The problem has a simple objective and a single constraint.
 
-    tools = ['hammer', 'wrench', 'screwdriver', 'towel']
-    v = {'hammer': 8, 'wrench': 3, 'screwdriver': 6, 'towel': 11}
-    w = {'hammer': 5, 'wrench': 7, 'screwdriver': 4, 'towel': 3}
-    limit = 14
+```python
+tools = ['hammer', 'wrench', 'screwdriver', 'towel']
+v = {'hammer': 8, 'wrench': 3, 'screwdriver': 6, 'towel': 11}
+w = {'hammer': 5, 'wrench': 7, 'screwdriver': 4, 'towel': 3}
+limit = 14
 
-    m = ConcreteModel()
+m = ConcreteModel()
 
-    m.x = Var(tools, within=Binary)
+m.x = Var(tools, within=Binary)
 
-    # Define objective and constraint
-    m.value = Objective(expr=sum(v[i]*m.x[i] for i in tools), sense=maximize)
-    m.weight = Constraint(expr=sum(m.w[i]*m.x[i] for i in tools) <= limit)
+# Define objective and constraint
+m.value = Objective(expr=sum(v[i]*m.x[i] for i in tools), sense=maximize)
+m.weight = Constraint(expr=sum(m.w[i]*m.x[i] for i in tools) <= limit)
+```
 
 ## Robust version
 Most Knapsack implementations assume that the parameters are known precisely.
@@ -28,31 +30,33 @@ weights are not known exactly, a solution which is just under the weight limit
 in theory may end up above the limit in practice. We consider a robust version
 of the Knapsack problem with uncertain weights:
 
-    tools = ['hammer', 'wrench', 'screwdriver', 'towel']
-    v = {'hammer': 8, 'wrench': 3, 'screwdriver': 6, 'towel': 11}
-    w = {'hammer': 5, 'wrench': 7, 'screwdriver': 4, 'towel': 3}
-    limit = 14
+```python
+tools = ['hammer', 'wrench', 'screwdriver', 'towel']
+v = {'hammer': 8, 'wrench': 3, 'screwdriver': 6, 'towel': 11}
+w = {'hammer': 5, 'wrench': 7, 'screwdriver': 4, 'towel': 3}
+limit = 14
 
-    m = ConcreteModel()
+m = ConcreteModel()
 
-    m.x = Var(tools, within=Binary)
+m.x = Var(tools, within=Binary)
 
-    # Define uncertainty set
-    m.P = UncSet()
-    # Define uncertain parameter
-    m.w = UncParam(tools, uncset=m.P, nominal=w)
+# Define uncertainty set
+m.P = UncSet()
+# Define uncertain parameter
+m.w = UncParam(tools, uncset=m.P, nominal=w)
 
-    # Define objective and constraint
-    m.value = Objective(expr=sum(v[i]*m.x[i] for i in tools), sense=maximize)
-    m.weight = Constraint(expr=sum(m.w[i]*m.x[i] for i in tools) <= limit)
+# Define objective and constraint
+m.value = Objective(expr=sum(v[i]*m.x[i] for i in tools), sense=maximize)
+m.weight = Constraint(expr=sum(m.w[i]*m.x[i] for i in tools) <= limit)
 
-    # Define Polyhedral uncertainty set ( U = {w | Pw <= rhs} )
-    perm = itertools.product([1, -1], repeat=len(tools))
-    P = [i for i in perm]
-    rhs = [sum(p[i]*w[t] for i, t in enumerate(tools)) + 5.5 for p in P]
-    M.P.cons = ConstraintList()
-    for i, p in enumerate(P):
-        M.P.cons.add(sum(M.w[t]*p[i] for i, t in enumerate(tools)) <= rhs[i])
+# Define Polyhedral uncertainty set ( U = {w | Pw <= rhs} )
+perm = itertools.product([1, -1], repeat=len(tools))
+P = [i for i in perm]
+rhs = [sum(p[i]*w[t] for i, t in enumerate(tools)) + 5.5 for p in P]
+M.P.cons = ConstraintList()
+for i, p in enumerate(P):
+    M.P.cons.add(sum(M.w[t]*p[i] for i, t in enumerate(tools)) <= rhs[i])
+```
 
 A total of 8 lines of code allow us to transform the nominal problem into a
 robust problem with a polyhedral uncertainty set.

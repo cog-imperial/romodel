@@ -25,44 +25,52 @@ The robust version of the pooling problem included in ROmodel assumes that the
 price at which each product can be sold is uncertain. 
 The example includes the following uncertainty sets:
 
-    # Ellipsoidal set constructed using the general approach:
-    m.U
-    # Ellipsoidal set constructed using the library approach:
-    m.Elib
-    # Polyhedral set constructed using the general approach:
-    m.P
-    # Polyhedral set constructed using the library approach:
-    m.Plib
-    # Convex set (neither ellipsoidal nor polyhedral):
-    m.C
+```python
+# Ellipsoidal set constructed using the general approach:
+m.U
+# Ellipsoidal set constructed using the library approach:
+m.Elib
+# Polyhedral set constructed using the general approach:
+m.P
+# Polyhedral set constructed using the library approach:
+m.Plib
+# Convex set (neither ellipsoidal nor polyhedral):
+m.C
+```
 
 
 ## Running the example
 The pooling problem example is available as part of ROmodel and can be used as
 follows:
 
-    import romodel.examples as ex
-    import pyomo.environ as pe
+```python
+import romodel.examples as ex
+import pyomo.environ as pe
 
-    m = ex.Pooling()
+m = ex.Pooling()
 
-    solver = pe.SolverFactory('romodel.cuts')
-    solver.solve(m)
+solver = pe.SolverFactory('romodel.cuts')
+solver.solve(m)
+```
 
 In order to use one of the other uncertainty sets from above use:
 
-    m = ex.Pooling
-    m.price_product.uncset = m.C
+```python
+m = ex.Pooling
+m.price_product.uncset = m.C
 
-    solver = pe.SolverFactory('romodel.cuts')
-    solver.solve(m)
+solver = pe.SolverFactory('romodel.cuts')
+solver.solve(m)
+```
 
 Note that the solving the pooling problem requires a solver which can solve
 non-convex quadratically constrained problems, e.g. gurobi:
 
-    solver = pe.SolverFactory('romodel.cuts')
-    solver.options['solver'] = 'gurobi'
-    # Allow non-convex problems
-    solver.options['NonConvex'] = 2
+```python
+solver = pe.SolverFactory('romodel.cuts')
+solver.options['solver'] = 'gurobi'
+# Allow non-convex problems
+solver.options['NonConvex'] = 2
+```
 
 The full code is available [here](../romodel/examples/pooling.py).
