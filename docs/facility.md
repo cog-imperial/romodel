@@ -7,6 +7,7 @@ demand should be met.
 
 # Nominal problem
 
+    ```python
     # Define parameters
     N = 4
     M = 5
@@ -40,6 +41,7 @@ demand should be met.
         lhs = sum(m.y[i, j] for j in range(M))
         return lhs <= max_dem[i]*m.x[i]
     m.max_dem = pe.Constraint(range(N), rule=max_demand_rule)
+    ```
 
 # Robust problem
 
