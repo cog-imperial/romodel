@@ -65,7 +65,7 @@ m.uncset.cons2 = pe.Constraint(m.w[0] - m.w[1] <= 1.5)
 
 ROmodel currently implements library versions of polyhedral uncertainty sets
 (`P*w <= d`), ellipsoidal sets (`(w - mu)^T Cov^-1 (w - mu) <= r^2`), and
-Gaussian Process-based uncertainty sets (see our [paper]() for more details).
+(warped) Gaussian process-based uncertainty sets (see our [paper](https://arxiv.org/abs/2006.08222) for more details).
 
 Polyhedral sets can be constructed using their matrix representation with the
 `PolyhedralSet` class:
