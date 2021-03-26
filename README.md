@@ -30,7 +30,7 @@ import pyomo.environ as pe
 import romodel as ro
 ```
 
-Create a Pyomo model (ROmodel is currently only tested with ConcreteModel) and
+Create a Pyomo model (ROmodel is currently only tested with Pyomo's `ConcreteModel`) and
 some variables:
 
 ```python
@@ -53,12 +53,12 @@ set simply add constraints to the `UncSet` object:
 
 ```python
 # Create a generic uncertainty set
-m.U = ro.UncSet()
+m.uncset = ro.UncSet()
 # Create an indexed uncertain parameter
-m.w = ro.UncParam([0, 1], uncset=m.U, nominal=[0.5, 0.8])
+m.w = ro.UncParam([0, 1], uncset=m.uncset, nominal=[0.5, 0.8])
 # Add constraints to the uncertainty set
-m.U.cons1 = pe.Constraint(m.w[0] + m.w[1] <= 1.5)
-m.U.cons2 = pe.Constraint(m.w[0] - m.w[1] <= 1.5)
+m.uncset.cons1 = pe.Constraint(m.w[0] + m.w[1] <= 1.5)
+m.uncset.cons2 = pe.Constraint(m.w[0] - m.w[1] <= 1.5)
 ```
 
 ### Library uncertainty sets
@@ -73,11 +73,11 @@ Polyhedral sets can be constructed using their matrix representation with the
 ```python
 from romodel.uncset import PolyhedralSet
 # Define polyhedral set
-m.U = PolyhedralSet(mat=[[ 1,  1],
-                         [ 1, -1],
-                         [-1,  1],
-                         [-1, -1]],
-                    rhs=[1, 1, 1, 1])
+m.uncset = PolyhedralSet(mat=[[ 1,  1],
+                              [ 1, -1],
+                              [-1,  1],
+                              [-1, -1]],
+                         rhs=[1, 1, 1, 1])
 ```
 
 Similarly, ellipsoidal sets can be constructed from a covariance matrix and a
@@ -86,10 +86,10 @@ mean vector using the `EllipsoidalSet` class:
 ```python
 from romodel.uncset import EllipsoidalSet
 # Define ellipsoidal set
-m.U = EllipsoidalSet(cov=[[1, 0, 0],
-                          [0, 1, 0],
-                          [0, 0, 1]],
-                     mean=[0.5, 0.3, 0.1])
+m.uncset = EllipsoidalSet(cov=[[1, 0, 0],
+                               [0, 1, 0],
+                               [0, 0, 1]],
+                          mean=[0.5, 0.3, 0.1])
 ```
 
 
@@ -115,7 +115,7 @@ If the coefficients `c` are uncertain, we can model the robust constraint as:
 ```python
 # robust
 m.x = pe.Var(range(3))
-m.c = ro.UncParam(range(3), nominal=[0.1, 0.2, 0.3], uncset=m.U)
+m.c = ro.UncParam(range(3), nominal=[0.1, 0.2, 0.3], uncset=m.uncset)
 m.cons = pe.Constraint(expr=sum(m.c[i]*m.x[i] for i in m.x) <= 0)
 ```
 
