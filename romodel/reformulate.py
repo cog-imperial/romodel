@@ -447,7 +447,6 @@ class WGPTransformation(BaseRobustTransformation):
             gp = uncset.gp
             var = uncset.var
             if type(var) is dict:
-                pass
                 z = [var[i] for i in index_set]
                 z = _to_np_obj_array(z)
             else:
