@@ -97,7 +97,7 @@ m.uncset = EllipsoidalSet(cov=[[1, 0, 0],
 
 Uncertain parameters can be created using the `UncParam` class. They are
 similar to Pyomo's `Param` modeling object and take a `nominal` argument, which
-specifies the nominal values, and an 'uncset' object, which specifies which
+specifies the nominal values, and an `uncset` object, which specifies which
 uncertainty set to use.  Uncertain constraints (or objectives) are created
 implicitly by using uncertain
 parameters in constraint expressions. As an example, consider the following
