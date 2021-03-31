@@ -1,19 +1,24 @@
 from pyomo.environ import Constraint, Var, quicksum, sqrt, Objective, Block
 from romodel.reformulate import BaseRobustTransformation
 from pyomo.core import TransformationFactory
-from itertools import chain
-from romodel.util import collect_uncparam
 
 
 @TransformationFactory.register('romodel.ellipsoidal',
                                 doc="Ellipsoidal Counterpart")
 class EllipsoidalTransformation(BaseRobustTransformation):
-    def _reformulate(self, instance, c, param, uncset, counterpart, root=False):
+    def _check_applicability(self, c, param, uncset):
+        return uncset.is_ellipsoidal()
+
+    def _check_constraint(self, c):
+        assert not c.equality, (
+                "Currently can't handle equality constraints yet.")
+
+    def _check_objective(self, o):
+        pass
+
+    def _reformulate(self, c, param, uncset, counterpart, root=False):
         # Check constraint/objective
-        if c.ctype is Constraint:
-            assert not c.equality, (
-                    "Currently can't handle equality constraints yet.")
-        repn = self.generate_repn_param(instance, c)
+        repn = self.generate_repn_param(c)
         assert repn.is_linear(), (
                 "Constraint {} should be linear in "
                 "unc. parameters".format(c.name))
@@ -73,26 +78,3 @@ class EllipsoidalTransformation(BaseRobustTransformation):
                 counterpart.det = deterministic
             counterpart.rob = robust
 
-    def _apply_to(self, instance, **kwargs):
-        for c in chain(self.get_uncertain_components(instance),
-                       self.get_uncertain_components(instance,
-                                                     component=Objective)):
-            # Collect unc. parameter and unc. set
-            param = collect_uncparam(c)
-            uncset = param._uncset
-            assert uncset is not None, ("No uncertainty set provided for "
-                                        "uncertain parameter {}."
-                                        .format(param.name))
-
-            # Check if uncertainty set is empty
-            assert not uncset.is_empty(), ("{} does not have any "
-                                           "constraints.".format(uncset.name))
-            # Check if uncertainty set is ellipsoidal
-            if not uncset.is_ellipsoidal():
-                continue
-
-            counterpart = Block()
-            setattr(instance, c.name + '_counterpart', counterpart)
-            self._reformulate(instance, c, param, uncset, counterpart, **kwargs)
-
-            c.deactivate()

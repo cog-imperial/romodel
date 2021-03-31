@@ -1,6 +1,7 @@
 from pyomo.environ import (Constraint,
                            Var,
                            Objective,
+                           Block,
                            maximize,
                            minimize)
 from pyomo.core import Transformation, TransformationFactory
@@ -44,7 +45,10 @@ class BaseRobustTransformation(Transformation):
             if _expression_is_uncertain(expr):
                 yield c
 
-    def generate_repn_param(self, instance, cdata):
+    def generate_repn_param(self, cdata):
+        # Get instance
+        instance = self._instance
+        # Fix variables
         self.fix_component(instance, component=Var)
         if hasattr(cdata, 'body'):
             expr = cdata.body
@@ -53,6 +57,47 @@ class BaseRobustTransformation(Transformation):
         repn = generate_standard_repn(expr, compute_values=False)
         self.unfix_component(component=Var)
         return repn
+
+    def _apply_to(self, instance, **kwargs):
+        self._instance = instance
+        for c in chain(self.get_uncertain_components(instance),
+                       self.get_uncertain_components(instance,
+                                                     component=Objective)):
+            # Collect unc. parameter and unc. set
+            param = collect_uncparam(c)
+            uncset = param._uncset
+            assert uncset is not None, ("No uncertainty set provided for "
+                                        "uncertain parameter {}."
+                                        .format(param.name))
+
+            # Check if uncertainty set is empty
+            assert not uncset.is_empty(), ("{} does not have any "
+                                           "constraints.".format(uncset.name))
+            # Check if reformulation is applicable to constraint & UncSet
+            if self._check_applicability(c, param, uncset):
+                # Check constraint
+                if c.ctype is Constraint:
+                    self._check_constraint(c)
+                else:
+                    self._check_objective(c)
+
+                counterpart = Block()
+                setattr(instance, c.name + '_counterpart', counterpart)
+                self._reformulate(c, param, uncset, counterpart, **kwargs)
+
+                c.deactivate()
+
+    def _reformulate(self, c, param, uncset, counterpart, **kwargs):
+        raise NotImplementedError
+
+    def _check_applicability(self, c):
+        raise NotImplementedError
+
+    def _check_constraint(self, c):
+        return True
+
+    def _check_objective(self, c):
+        return True
 
 
 @TransformationFactory.register('romodel.generators',
