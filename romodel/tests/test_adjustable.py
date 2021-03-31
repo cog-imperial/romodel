@@ -46,6 +46,26 @@ class TestLDR(unittest.TestCase):
         for x in repn.quadratic_vars:
             self.assertIn((id(x[0]), id(x[1])), baseline)
 
+    def test_set_uncparams_ldr(self):
+        m = pe.ConcreteModel()
+        m.w = ro.UncParam([0, 1, 2])
+        m.y = ro.AdjustableVar([0, 1, 2], uncparams=[m.w])
+        m.y[0].set_uncparams([m.w[0]])
+        m.y[1].set_uncparams([m.w[0], m.w[1]])
+        m.cons = pe.Constraint(expr=sum(m.y[i] for i in m.y) <= 1)
+
+        t = LDRAdjustableTransformation()
+        t.apply_to(m)
+
+        self.assertTrue(hasattr(m, 'cons_ldr'))
+        repn = generate_standard_repn(m.cons_ldr.body)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.quadratic_vars), 6)
+        baseline = set((id(m.w[i]), id(m.y_w_coef[j, i]))
+                       for j in m.y for i in range(j + 1))
+        for x in repn.quadratic_vars:
+            self.assertIn((id(x[0]), id(x[1])), baseline)
+
     def test_indexed_two_uncparams(self):
         m = pe.ConcreteModel()
         m.w = ro.UncParam([0, 1, 2])
@@ -185,6 +205,17 @@ class TestAdjustable(unittest.TestCase):
         self.assertTrue(m.y[0].is_variable_type())
         self.assertFalse(m.y[1].is_parameter_type())
         self.assertIs(m.y[0].ctype, ro.AdjustableVar)
+
+    def test_set_uncparams(self):
+        m = pe.ConcreteModel()
+        m.w = ro.UncParam([0, 1, 2])
+        m.y = ro.AdjustableVar([0, 1], uncparams=[m.w])
+        m.y[0].set_uncparams([m.w[0], m.w[1]])
+        self.assertEqual(id(m.y[0].uncparams[0]), id(m.w[0]))
+        self.assertEqual(id(m.y[0].uncparams[1]), id(m.w[1]))
+        self.assertEqual(len(m.y[0].uncparams), 2)
+        self.assertEqual(id(m.y[1].uncparams[0]), id(m.w))
+        self.assertEqual(len(m.y[1].uncparams), 1)
 
 
 class TestAdjustableNominal(unittest.TestCase):
