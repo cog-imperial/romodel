@@ -25,9 +25,3 @@ class EllipsoidalSet(UncSet):
                          * invcov[i, j]
                          * (param[ind_j] - self.mean[j]))
         yield None, expr, self.rhs
-
-    def is_ellipsoidal(self):
-        return True
-
-    def is_polyhedral(self):
-        return False

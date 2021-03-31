@@ -15,10 +15,23 @@ import numpy as np
 @TransformationFactory.register('romodel.warpedgp',
                                 doc="Reformulate warped Gaussian Process set.")
 class WGPTransformation(BaseRobustTransformation):
-    def _check_applicability(self, c, param, uncset):
+    def _check_applicability(self, uncset):
+        """
+        Returns `True` if the reformulation is applicable to `uncset`
+
+            uncset: UncSet
+
+        """
         return uncset.__class__ == WarpedGPSet
 
     def _check_constraint(self, c):
+        """
+        Raise an error if the constraint is inappropriate for this
+        reformulation
+
+            c: Constraint
+
+        """
         if c.equality:
             raise RuntimeError(
                     "'UncParam's cannot appear in equality constraints, "
@@ -26,6 +39,15 @@ class WGPTransformation(BaseRobustTransformation):
                     "variables.")
 
     def _reformulate(self, c, param, uncset, counterpart, initialize_wolfe=False):
+        """
+        Reformulate an uncertain constraint or objective
+
+            c: Constraint or Objective
+            param: UncParam
+            uncset: UncSet
+            counterpart: Block
+
+        """
 
         # Only proceed if uncertainty set is WarpedGPSet
         from rogp.util.numpy import _pyomo_to_np, _to_np_obj_array

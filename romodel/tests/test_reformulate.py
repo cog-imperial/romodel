@@ -16,11 +16,11 @@ class TestReformulation(unittest.TestCase):
     def test_polyhedral(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.P
-        self.assertTrue(m.P.is_polyhedral())
-        self.assertTrue(m.Plib.is_polyhedral())
-        self.assertFalse(m.E.is_polyhedral())
-        self.assertFalse(m.Elib.is_polyhedral())
         t = PolyhedralTransformation()
+        self.assertTrue(t._check_applicability(m.P))
+        self.assertTrue(t._check_applicability(m.Plib))
+        self.assertFalse(t._check_applicability(m.E))
+        self.assertFalse(t._check_applicability(m.Elib))
         t.apply_to(m)
         solver = pe.SolverFactory('gurobi_direct')
         solver.solve(m)
@@ -118,11 +118,11 @@ class TestReformulation(unittest.TestCase):
     def test_ellipsoidal(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.E
-        self.assertFalse(m.P.is_ellipsoidal())
-        self.assertFalse(m.Plib.is_ellipsoidal())
-        self.assertTrue(m.E.is_ellipsoidal())
-        self.assertTrue(m.Elib.is_ellipsoidal())
         t = EllipsoidalTransformation()
+        self.assertFalse(t._check_applicability(m.P))
+        self.assertFalse(t._check_applicability(m.Plib))
+        self.assertTrue(t._check_applicability(m.E))
+        self.assertTrue(t._check_applicability(m.Elib))
         t.apply_to(m)
         solver = pe.SolverFactory('gurobi_direct')
         solver.options['NonConvex'] = 2

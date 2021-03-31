@@ -11,19 +11,73 @@ from pyomo.environ import (Constraint,
 from pyomo.core import TransformationFactory
 from romodel.duality import create_linear_dual_from
 from romodel.reformulate import BaseRobustTransformation
+from pyomo.repn import generate_standard_repn
+from romodel.uncset import UncSet, PolyhedralSet
+from romodel.util import collect_uncparam
 
 
 @TransformationFactory.register('romodel.polyhedral',
                                 doc="Polyhedral Counterpart")
 class PolyhedralTransformation(BaseRobustTransformation):
-    def _check_applicability(self, c, param, uncset):
-        return uncset.is_polyhedral()
+    def _check_applicability(self, uncset):
+        """
+        Returns `True` if the reformulation is applicable to `uncset`
+
+            uncset: UncSet
+
+        """
+        # Check for library set
+        if uncset.__class__ == PolyhedralSet:
+            return True
+        # Check generic set:
+        elif uncset.__class__ == UncSet:
+            mat = []
+            rhs = []
+            for c in uncset.component_data_objects(Constraint, active=True):
+                # Generate standard repn
+                repn = generate_standard_repn(c.body)
+                param = collect_uncparam(c)
+                # If uncertainty set contains a non-linear constraint it's not
+                # polyhedral.
+                if not repn.is_linear():
+                    return False
+                coef_dict = {id(x): y for x, y in zip(repn.linear_vars,
+                                                      repn.linear_coefs)}
+                if c.has_ub():
+                    mat.append([coef_dict.get(id(param[i]), 0) for i in param])
+                    rhs.append(c.upper - repn.constant)
+                if c.has_lb():
+                    mat.append([-coef_dict.get(id(param[i]), 0) for i in param])
+                    rhs.append(repn.constant - c.lower)
+
+            uncset.mat = mat
+            uncset.rhs = rhs
+
+            return True
+
+        return False
 
     def _check_constraint(self, c):
+        """
+        Raise an error if the constraint is inappropriate for this
+        reformulation
+
+            c: Constraint
+
+        """
         assert not c.equality, (
                 "Currently can't handle equality constraints yet.")
 
     def _reformulate(self, c, param, uncset, counterpart, pao=False):
+        """
+        Reformulate an uncertain constraint or objective
+
+            c: Constraint or Objective
+            param: UncParam
+            uncset: UncSet
+            counterpart: Block
+
+        """
 
         repn = self.generate_repn_param(c)
         assert repn.is_linear(), (

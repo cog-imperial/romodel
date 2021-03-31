@@ -74,7 +74,7 @@ class BaseRobustTransformation(Transformation):
             assert not uncset.is_empty(), ("{} does not have any "
                                            "constraints.".format(uncset.name))
             # Check if reformulation is applicable to constraint & UncSet
-            if self._check_applicability(c, param, uncset):
+            if self._check_applicability(uncset):
                 # Check constraint
                 if c.ctype is Constraint:
                     self._check_constraint(c)

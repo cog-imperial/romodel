@@ -10,11 +10,24 @@ import numpy as np
 @TransformationFactory.register('romodel.gp',
                                 doc="Reformulate Gaussian Process set.")
 class GPTransformation(BaseRobustTransformation):
-    def _check_applicability(self, c, param, uncset):
+    def _check_applicability(self, uncset):
+        """
+        Returns `True` if the reformulation is applicable to `uncset`
+
+            uncset: UncSet
+
+        """
         # Only proceed if uncertainty set is GPSet
         return uncset.__class__ == GPSet
 
     def _check_constraint(self, c):
+        """
+        Raise an error if the constraint is inappropriate for this
+        reformulation
+
+            c: Constraint
+
+        """
         if c.equality:
             raise RuntimeError(
                     "'UncParam's cannot appear in equality constraints, "
@@ -22,6 +35,15 @@ class GPTransformation(BaseRobustTransformation):
                     "variables.")
 
     def _reformulate(self, c, param, uncset, counterpart):
+        """
+        Reformulate an uncertain constraint or objective
+
+            c: Constraint or Objective
+            param: UncParam
+            uncset: UncSet
+            counterpart: Block
+
+        """
         from rogp.util.numpy import _pyomo_to_np, _to_np_obj_array
 
         repn = self.generate_repn_param(c)
