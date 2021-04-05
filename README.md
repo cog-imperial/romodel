@@ -183,7 +183,7 @@ solver.solve(m)
 ROmodel includes a number of example problems:
 
 1. [Knapsack problem](docs/knapsack.md)
-2. [Portfolio optimiation problem](docs/portfolio.md)
+2. [Portfolio optimization problem](docs/portfolio.md)
 3. [Pooling problem](docs/pooling.md) (Nonlinear robust optimization)
 4. [Facility location problem](docs/facility.md) (Adjustable robust optimization)
 5. [Production planning problem](docs/planning.md) (Warped GP based uncertainty sets)
