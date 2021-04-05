@@ -1,7 +1,5 @@
-from pyomo.environ import (Constraint,
-                           Objective)
+from pyomo.environ import Constraint, Objective, TransformationFactory
 from pyomo.environ import sqrt as pyomo_sqrt
-from pyomo.core import TransformationFactory
 from romodel.uncset import GPSet
 from romodel.reformulate import BaseRobustTransformation
 import numpy as np
