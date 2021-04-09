@@ -9,7 +9,7 @@ also implements a number of algorithms for solving these problems.
 To install ROmodel use:
 
 ```bash        
-pip install git+https://github.com/johwiebe/romodel.git
+pip install git+https://github.com/cog-imperial/romodel.git
 ```
 
 ## Getting started 
