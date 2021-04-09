@@ -19,9 +19,3 @@ class PolyhedralSet(UncSet):
                    quicksum(row[j]*param[ind]
                             for j, ind in enumerate(param)),
                    self.rhs[i])
-
-    def is_polyhedral(self):
-        return True
-
-    def is_ellipsoidal(self):
-        return False

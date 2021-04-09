@@ -16,11 +16,11 @@ class TestReformulation(unittest.TestCase):
     def test_polyhedral(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.P
-        self.assertTrue(m.P.is_polyhedral())
-        self.assertTrue(m.Plib.is_polyhedral())
-        self.assertFalse(m.E.is_polyhedral())
-        self.assertFalse(m.Elib.is_polyhedral())
         t = PolyhedralTransformation()
+        self.assertTrue(t._check_applicability(m.P))
+        self.assertTrue(t._check_applicability(m.Plib))
+        self.assertFalse(t._check_applicability(m.E))
+        self.assertFalse(t._check_applicability(m.Elib))
         t.apply_to(m)
         solver = pe.SolverFactory('gurobi_direct')
         solver.solve(m)
@@ -52,7 +52,8 @@ class TestReformulation(unittest.TestCase):
         t = ro.PolyhedralTransformation()
         t.apply_to(m)
         self.assertFalse(m.cons.active)
-        self.assertTrue(hasattr(m, 'cons_counterpart_lower'))
+        self.assertTrue(hasattr(m, 'cons_counterpart'))
+        self.assertTrue(hasattr(m.cons_counterpart, 'lower'))
 
     def test_polyhedral_cons_ub(self):
         m = pe.ConcreteModel()
@@ -69,7 +70,8 @@ class TestReformulation(unittest.TestCase):
         t = ro.PolyhedralTransformation()
         t.apply_to(m)
         self.assertFalse(m.cons.active)
-        self.assertTrue(hasattr(m, 'cons_counterpart_upper'))
+        self.assertTrue(hasattr(m, 'cons_counterpart'))
+        self.assertTrue(hasattr(m.cons_counterpart, 'upper'))
 
     def test_polyhedral_obj_min(self):
         m = pe.ConcreteModel()
@@ -87,8 +89,9 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertTrue(hasattr(m, 'obj_new'))
-        self.assertIs(m.obj_new.sense, pe.minimize)
+        self.assertTrue(hasattr(m.obj_counterpart, 'obj'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'dual'))
+        self.assertIs(m.obj_counterpart.obj.sense, pe.minimize)
 
     def test_polyhedral_obj_max(self):
         m = pe.ConcreteModel()
@@ -106,19 +109,20 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertTrue(hasattr(m, 'obj_new'))
-        self.assertIs(m.obj_new.sense, pe.maximize)
+        self.assertTrue(hasattr(m.obj_counterpart, 'obj'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'dual'))
+        self.assertIs(m.obj_counterpart.obj.sense, pe.maximize)
 
     @unittest.skipIf('gurobi_direct' not in solvers,
                      'gurobi_direct not available')
     def test_ellipsoidal(self):
         m = romodel.examples.Knapsack()
         m.w.uncset = m.E
-        self.assertFalse(m.P.is_ellipsoidal())
-        self.assertFalse(m.Plib.is_ellipsoidal())
-        self.assertTrue(m.E.is_ellipsoidal())
-        self.assertTrue(m.Elib.is_ellipsoidal())
         t = EllipsoidalTransformation()
+        self.assertFalse(t._check_applicability(m.P))
+        self.assertFalse(t._check_applicability(m.Plib))
+        self.assertTrue(t._check_applicability(m.E))
+        self.assertTrue(t._check_applicability(m.Elib))
         t.apply_to(m)
         solver = pe.SolverFactory('gurobi_direct')
         solver.options['NonConvex'] = 2
@@ -154,7 +158,9 @@ class TestReformulation(unittest.TestCase):
         t = ro.EllipsoidalTransformation()
         t.apply_to(m, root=False)
         self.assertFalse(m.cons.active)
-        self.assertTrue(hasattr(m, 'cons_counterpart_lower'))
+        self.assertTrue(hasattr(m, 'cons_counterpart'))
+        self.assertTrue(hasattr(m.cons_counterpart, 'lower'))
+        self.assertTrue(hasattr(m.cons_counterpart.lower, 'rob'))
 
     def test_ellipsoidal_objective_min(self):
         m = pe.ConcreteModel()
@@ -174,8 +180,10 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m, root=False)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertTrue(hasattr(m, 'obj_padding'))
-        self.assertIs(m.obj_counterpart.sense, pe.minimize)
+        self.assertTrue(hasattr(m.obj_counterpart, 'padding'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'det'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'rob'))
+        self.assertIs(m.obj_counterpart.rob.sense, pe.minimize)
 
     def test_ellipsoidal_objective_max(self):
         m = pe.ConcreteModel()
@@ -195,9 +203,10 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m, root=False)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertTrue(hasattr(m, 'obj_det'))
-        self.assertTrue(hasattr(m, 'obj_padding'))
-        self.assertIs(m.obj_counterpart.sense, pe.maximize)
+        self.assertTrue(hasattr(m.obj_counterpart, 'padding'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'det'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'rob'))
+        self.assertIs(m.obj_counterpart.rob.sense, pe.maximize)
 
     def test_ellipsoidal_cons_lb_root(self):
         m = pe.ConcreteModel()
@@ -216,7 +225,9 @@ class TestReformulation(unittest.TestCase):
         t = ro.EllipsoidalTransformation()
         t.apply_to(m, root=True)
         self.assertFalse(m.cons.active)
-        self.assertTrue(hasattr(m, 'cons_counterpart_lower'))
+        self.assertTrue(hasattr(m, 'cons_counterpart'))
+        self.assertTrue(hasattr(m.cons_counterpart, 'lower'))
+        self.assertTrue(hasattr(m.cons_counterpart.lower, 'rob'))
 
     def test_ellipsoidal_obj_min_root(self):
         m = pe.ConcreteModel()
@@ -236,9 +247,9 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m, root=True)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertFalse(hasattr(m, 'obj_padding'))
-        self.assertFalse(hasattr(m, 'obj_det'))
-        self.assertIs(m.obj_counterpart.sense, pe.minimize)
+        self.assertFalse(hasattr(m.obj_counterpart, 'det'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'rob'))
+        self.assertIs(m.obj_counterpart.rob.sense, pe.minimize)
 
     def test_ellipsoidal_obj_max_root(self):
         m = pe.ConcreteModel()
@@ -258,9 +269,9 @@ class TestReformulation(unittest.TestCase):
         t.apply_to(m, root=True)
         self.assertFalse(m.obj.active)
         self.assertTrue(hasattr(m, 'obj_counterpart'))
-        self.assertFalse(hasattr(m, 'obj_det'))
-        self.assertFalse(hasattr(m, 'obj_padding'))
-        self.assertIs(m.obj_counterpart.sense, pe.maximize)
+        self.assertFalse(hasattr(m.obj_counterpart, 'det'))
+        self.assertTrue(hasattr(m.obj_counterpart, 'rob'))
+        self.assertIs(m.obj_counterpart.rob.sense, pe.maximize)
 
     # def test_ellipsoidal_lib_root(self):
     #     m = romodel.examples.Knapsack()
