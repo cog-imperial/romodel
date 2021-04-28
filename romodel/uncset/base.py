@@ -1,9 +1,6 @@
 from pyomo.core import SimpleBlock, ModelComponentFactory, Component
 from pyomo.core import Constraint
-from pyomo.repn import generate_standard_repn
-from romodel.visitor import identify_parent_components
 from romodel.uncparam import UncParam
-import numpy as np
 
 
 @ModelComponentFactory.register("Uncertainty set in a robust problem")
@@ -57,3 +54,10 @@ class UncSet(SimpleBlock):
                 param = p
             else:
                 assert param is p
+
+    def generate_cons_from_lib(self, param):
+        name = self.__class__.__name__
+        raise NotImplementedError(
+                "Looks like the cutting plane solver is not applicable to "
+                "library set '{}'. Try 'romodel.reformulate'".format(name)
+            )
