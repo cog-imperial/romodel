@@ -162,6 +162,9 @@ class NominalTransformation(BaseRobustTransformation):
         for c in cons:
             param = collect_uncparam(c)
             for i in param:
+                if param[i].nominal is None:
+                    raise RuntimeError("Uncertain parameter '{}' does not have"
+                                       " a nominal value.".format(param[i].name))
                 smap[id(param[i])] = param[i].nominal
             body_nominal = replace_expressions(c.body, smap)
             c.set_value((c.lower, body_nominal, c.upper))
