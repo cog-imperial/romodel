@@ -191,7 +191,7 @@ ROmodel includes a number of example problems:
 Further freely available examples of problems implemented in ROmodel include:
 
 6. [State-Task-Network with degradation](https://github.com/johwiebe/stn)
-7. [Drill scheduling problem](https://github.com/johwiebe/drilling)
+7. [Drill scheduling problem](https://github.com/cog-imperial/drill-scheduling)
 
 
 
