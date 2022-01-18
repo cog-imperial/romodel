@@ -1,2 +1,2 @@
-numpy
-Pyomo
+Numpy
+Pyomo<=6.0
