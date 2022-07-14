@@ -1,10 +1,10 @@
-from pyomo.core import SimpleBlock, ModelComponentFactory, Component
+from pyomo.core import ScalarBlock, ModelComponentFactory, Component
 from pyomo.core import Constraint
 from romodel.uncparam import UncParam
 
 
 @ModelComponentFactory.register("Uncertainty set in a robust problem")
-class UncSet(SimpleBlock):
+class UncSet(ScalarBlock):
     """
     This model component defines an uncertainty set in a robust optimization
     problem.
@@ -18,10 +18,10 @@ class UncSet(SimpleBlock):
 
         # _var = kwargs.pop('var', None)
         #
-        # Initialize the SimpleBlock
+        # Initialize the ScalarBlock
         #
         kwargs.setdefault('ctype', UncSet)
-        SimpleBlock.__init__(self, *args, **kwargs)
+        ScalarBlock.__init__(self, *args, **kwargs)
         #
         # Initialize from kwargs
         #
